@@ -1,69 +1,233 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { BookOpen, GraduationCap, Users, ChevronRight, Activity, Database, Server } from "lucide-react";
 
 export default function Home() {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="flex flex-col min-h-screen relative overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+      {/* Ambient background glows */}
+      <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#a855f7]/5 blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#a855f7]/5 blur-[120px] pointer-events-none" />
+
+      {/* ── Hero Section ─────────────────────────────────────────────── */}
+      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#a855f7]/10 text-[#a855f7] text-xs font-bold tracking-widest mb-8 border border-[#a855f7]/20 shadow-[0_0_15px_rgba(168, 85, 247,0.1)]"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <Activity className="w-3.5 h-3.5" />
+            <span>SYSTEM ONLINE</span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6"
+            style={{ color: "var(--text-primary)" }}
           >
-            Documentation
-          </a>
+            Capacity{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r dark:from-[#e8ecf4] dark:to-[#556580] from-[#7c3aed] to-[#a855f7]">
+              Connect
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="mt-4 max-w-2xl mx-auto text-lg mb-12 font-medium"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            A high-performance Digital Capacity Building and Learning Management
+            Portal designed to support organizational training and competency
+            development.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex flex-col sm:flex-row justify-center gap-5"
+          >
+            <Link
+              href="/signup"
+              className="inline-flex items-center justify-center px-8 py-4 text-sm font-bold tracking-widest rounded-lg text-white bg-purple-600 hover:bg-purple-700 dark:bg-[#a855f7]/20 dark:hover:bg-[#a855f7]/30 border border-purple-600 dark:border-[#a855f7]/30 shadow-[0_0_20px_rgba(168, 85, 247,0.3)] dark:shadow-[0_0_20px_rgba(168, 85, 247,0.15)] transition-all group"
+            >
+              INITIALIZE{" "}
+              <ChevronRight className="pointer-events-none ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link
+              href="/courses"
+              className="inline-flex items-center justify-center px-8 py-4 text-sm font-bold tracking-widest rounded-lg border transition-all hover:bg-black/5 dark:hover:bg-white/5"
+              style={{ color: "var(--text-primary)", borderColor: "var(--border-lit)" }}
+            >
+              VIEW CATALOG
+            </Link>
+          </motion.div>
         </div>
-      </main>
+      </section>
+
+      {/* ── Glassmorphism Feeds Grid ──────────────────────────────────── */}
+      <section
+        className="py-20 relative z-10 border-t"
+        style={{ borderColor: "var(--border-light)", background: "var(--panel)" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            {/* Announcements Panel */}
+            <motion.div variants={itemVariants} className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#e8ecf4]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="flex items-center gap-3 mb-6 pb-4" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                <Database className="w-5 h-5" style={{ color: "var(--text-secondary)" }} />
+                <h3 className="text-sm font-bold tracking-[0.1em] uppercase" style={{ color: "var(--text-primary)" }}>
+                  Announcements
+                </h3>
+              </div>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-4 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                    <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#a855f7] shrink-0 shadow-[0_0_8px_rgba(168, 85, 247,0.8)]" />
+                    <div>
+                      <h4 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+                        System Update v{i}.0
+                      </h4>
+                      <p className="text-xs mt-1 font-mono" style={{ color: "var(--text-muted)" }}>
+                        T-{i * 2} HOURS
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Node Status Panel */}
+            <motion.div variants={itemVariants} className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#e8ecf4]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="flex items-center gap-3 mb-6 pb-4" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                <Server className="w-5 h-5" style={{ color: "var(--text-secondary)" }} />
+                <h3 className="text-sm font-bold tracking-[0.1em] uppercase" style={{ color: "var(--text-primary)" }}>
+                  Node Status
+                </h3>
+              </div>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-4 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                    <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#10b981] shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                    <div>
+                      <h4 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+                        Module {i} Online
+                      </h4>
+                      <p className="text-xs mt-1 font-mono" style={{ color: "var(--text-muted)" }}>
+                        99.{9 - i}% UPTIME
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Data Stream Panel */}
+            <motion.div variants={itemVariants} className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#e8ecf4]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="flex items-center gap-3 mb-6 pb-4" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                <BookOpen className="w-5 h-5" style={{ color: "var(--text-secondary)" }} />
+                <h3 className="text-sm font-bold tracking-[0.1em] uppercase" style={{ color: "var(--text-primary)" }}>
+                  Data Stream
+                </h3>
+              </div>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-3 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                    <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 border" style={{ background: "var(--card)", borderColor: "var(--border-light)" }}>
+                      <BookOpen className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                        Advanced Protocols
+                      </h4>
+                      <p className="text-xs mt-1 font-mono truncate" style={{ color: "var(--text-muted)" }}>
+                        ID: 0x{i}F9A
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Features Section ──────────────────────────────────────────── */}
+      <section
+        className="py-24 relative z-10 border-t"
+        style={{ borderColor: "var(--border-light)", background: "var(--card)" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center"
+          >
+            <motion.div variants={itemVariants} className="flex flex-col items-center glass-card p-8 rounded-2xl">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 border" style={{ background: "var(--card)", borderColor: "var(--border-light)" }}>
+                <Users className="w-6 h-6" style={{ color: "var(--text-primary)" }} />
+              </div>
+              <h3 className="text-lg font-bold mb-3 tracking-wide">Community</h3>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                A thriving network of learners and experts collaborating seamlessly in a unified environment.
+              </p>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="flex flex-col items-center glass-card p-8 rounded-2xl relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#a855f7]/5 to-transparent pointer-events-none" />
+              <div className="w-14 h-14 rounded-xl bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center mb-6 shadow-[0_0_15px_rgba(168, 85, 247,0.15)] relative z-10">
+                <GraduationCap className="w-6 h-6 text-[#a855f7]" />
+              </div>
+              <h3 className="text-lg font-bold mb-3 tracking-wide relative z-10">Competency</h3>
+              <p className="text-sm leading-relaxed relative z-10" style={{ color: "var(--text-secondary)" }}>
+                Smart mapping algorithms to identify suitable trainers and optimize learning pathways.
+              </p>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="flex flex-col items-center glass-card p-8 rounded-2xl">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 border" style={{ background: "var(--card)", borderColor: "var(--border-light)" }}>
+                <BookOpen className="w-6 h-6" style={{ color: "var(--text-primary)" }} />
+              </div>
+              <h3 className="text-lg font-bold mb-3 tracking-wide">Library</h3>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                Centralized access to lectures, study materials, and assessments with real-time tracking.
+              </p>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 }

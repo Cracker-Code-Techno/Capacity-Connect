@@ -1,0 +1,23 @@
+CAPACITY CONNECT - Technology Stack
+
+Frontend:
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS v4 (Styling)
+- Framer Motion (Animations & Micro-interactions)
+- Lucide React (Icons)
+- Next Themes (Dark Mode support)
+
+Backend / API:
+- Next.js API Routes (Serverless handlers)
+- Prisma ORM (Database access)
+- PostgreSQL (Database)
+
+Authentication & Security:
+- NextAuth.js (Session management & RBAC - Role Based Access Control)
+- bcryptjs (Password hashing)
+
+Development & Tooling:
+- ESLint (Code linting)
+- npm (Package management)
