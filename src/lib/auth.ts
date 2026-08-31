@@ -16,15 +16,18 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
+        console.log("Login attempt for:", credentials.email);
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         });
 
         if (!user || !user.password) {
+          console.log("User not found or no password");
           throw new Error("Invalid email or password");
         }
 
         const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password);
+        console.log("Password correct?", isPasswordCorrect);
 
         if (!isPasswordCorrect) {
           throw new Error("Invalid email or password");

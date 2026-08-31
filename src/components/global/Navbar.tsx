@@ -13,12 +13,9 @@ export function Navbar() {
   const { theme, setTheme } = useTheme();
 
   const getDashboardLink = () => {
-    if (!(session?.user as any)?.role) return "/dashboard/trainee";
-    switch ((session?.user as any).role.toLowerCase()) {
-      case 'admin': return "/dashboard/admin";
-      case 'trainer': return "/dashboard/trainer";
-      default: return "/dashboard/trainee";
-    }
+    if ((session?.user as any)?.role === "TRAINER") return "/trainer";
+    if ((session?.user as any)?.role === "ADMIN") return "/admin";
+    return "/trainee";
   };
 
   return (
