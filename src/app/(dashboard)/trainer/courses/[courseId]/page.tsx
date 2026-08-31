@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import ModuleCard from "./ModuleCard";
+import AssessmentCard from "./AssessmentCard";
 
 export default function CourseManagementPage({ params }: { params: Promise<{ courseId: string }> | { courseId: string } }) {
   const { data: session } = useSession();
@@ -237,17 +239,7 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
                 </div>
               ) : (
                 course.modules.map((mod: any, index: number) => (
-                  <div key={mod.id || index} className="glass-card p-5 rounded-xl border border-[rgba(255,255,255,0.05)]">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-[#a855f7]/10 flex items-center justify-center font-mono text-sm font-bold text-[#a855f7]">
-                        {mod.order || (index + 1)}
-                      </div>
-                      <h3 className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>{mod.title}</h3>
-                    </div>
-                    <div className="pl-12 text-sm opacity-80" style={{ color: "var(--text-secondary)" }}>
-                      {mod.content?.substring(0, 150)}{mod.content?.length > 150 ? '...' : ''}
-                    </div>
-                  </div>
+                  <ModuleCard key={mod.id || index} mod={mod} index={index} onRefresh={fetchCourse} />
                 ))
               )}
             </div>
@@ -355,10 +347,7 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
                 </div>
               ) : (
                 course.assessments.map((assessment: any) => (
-                  <div key={assessment.id} className="glass-card p-5 rounded-xl border border-[rgba(255,255,255,0.05)]">
-                    <h3 className="font-bold text-lg mb-1" style={{ color: "var(--text-primary)" }}>{assessment.title}</h3>
-                    <p className="text-xs font-mono text-emerald-500">{assessment.questions?.length || 0} Questions</p>
-                  </div>
+                  <AssessmentCard key={assessment.id} assessment={assessment} onRefresh={fetchCourse} />
                 ))
               )}
             </div>

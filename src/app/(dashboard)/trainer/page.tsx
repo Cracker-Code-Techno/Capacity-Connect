@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import CourseCard from "./CourseCard";
 
 export default async function TrainerDashboard() {
   const session = await getServerSession(authOptions);
@@ -104,28 +105,7 @@ export default async function TrainerDashboard() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {courses.map((course: any) => (
-                  <div key={course.id} className="glass-card rounded-xl p-6 flex flex-col relative group border border-[#a855f7]/10 transition-all hover:border-[#a855f7]/30">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{course.title}</h3>
-                      <Link href={`/trainer/courses/${course.id}`} className="p-2 bg-[#a855f7]/10 hover:bg-[#a855f7]/20 text-[#a855f7] rounded-lg transition-colors">
-                        <Edit className="w-4 h-4" />
-                      </Link>
-                    </div>
-                    <p className="text-sm line-clamp-2 mb-6 flex-grow" style={{ color: "var(--text-secondary)" }}>
-                      {course.description}
-                    </p>
-                    
-                    <div className="flex gap-4 border-t pt-4" style={{ borderColor: "var(--border-light)" }}>
-                      <div className="text-xs">
-                        <span style={{ color: "var(--text-muted)" }}>Modules: </span>
-                        <span className="font-bold text-[#a855f7]">{course._count.modules}</span>
-                      </div>
-                      <div className="text-xs">
-                        <span style={{ color: "var(--text-muted)" }}>Enrolled: </span>
-                        <span className="font-bold text-[#a855f7]">{course._count.enrollments}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <CourseCard key={course.id} course={course} />
                 ))}
               </div>
             )}

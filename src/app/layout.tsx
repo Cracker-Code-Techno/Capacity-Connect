@@ -32,7 +32,7 @@ export default function RootLayout({
         <SessionProvider>
           <ThemeProvider defaultTheme="dark">
             <Navbar />
-            <main className="flex-grow flex flex-col relative z-0">
+            <main className="flex-grow flex flex-col">
               {children}
             </main>
             <Footer />
