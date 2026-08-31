@@ -9,7 +9,7 @@ export async function GET() {
           orderBy: { order: 'asc' }
         },
         _count: {
-          select: { modules: true, enrollments: true }
+          select: { modules: true, enrollments: true, assessments: true }
         }
       },
       orderBy: {

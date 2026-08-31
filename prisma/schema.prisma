@@ -19,6 +19,7 @@ model User {
   updatedAt     DateTime       @updatedAt
   enrollments   Enrollment[]
   announcements Announcement[]
+  attempts      AssessmentAttempt[]
 }
 
 model Course {
@@ -31,6 +32,7 @@ model Course {
   updatedAt   DateTime       @updatedAt
   modules     CourseModule[]
   enrollments Enrollment[]
+  assessments Assessment[]
 }
 
 model CourseModule {
@@ -64,4 +66,42 @@ model Announcement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Assessment {
+  id        String     @id @default(cuid())
+  title     String
+  courseId  String
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  AssessmentAttempt[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Question {
+  id           String     @id @default(cuid())
+  text         String
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  options      Option[]
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  text       String
+  isCorrect  Boolean  @default(false)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model AssessmentAttempt {
+  id           String     @id @default(cuid())
+  userId       String
+  assessmentId String
+  score        Int
+  passed       Boolean
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
 }

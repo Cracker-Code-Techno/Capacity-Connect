@@ -1,10 +1,42 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { BookOpen, GraduationCap, Users, ChevronRight, Activity, Database, Server } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
+  const { data: session } = useSession();
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [annRes, courseRes] = await Promise.all([
+          fetch("/api/announcements"),
+          fetch("/api/courses")
+        ]);
+        if (annRes.ok) {
+          const data = await annRes.json();
+          setAnnouncements(data.slice(0, 3));
+        }
+        if (courseRes.ok) {
+          const data = await courseRes.json();
+          setCourses(data.slice(0, 3));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -17,6 +49,8 @@ export default function Home() {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
   };
+
+  const allModules = courses.flatMap((c: any) => c.modules || []).slice(0, 3);
 
   return (
     <div className="flex flex-col min-h-screen relative overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)" }}>
@@ -68,13 +102,23 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex flex-col sm:flex-row justify-center gap-5"
           >
-            <Link
-              href="/signup"
-              className="inline-flex items-center justify-center px-8 py-4 text-sm font-bold tracking-widest rounded-lg text-white bg-purple-600 hover:bg-purple-700 dark:bg-[#a855f7]/20 dark:hover:bg-[#a855f7]/30 border border-purple-600 dark:border-[#a855f7]/30 shadow-[0_0_20px_rgba(168, 85, 247,0.3)] dark:shadow-[0_0_20px_rgba(168, 85, 247,0.15)] transition-all group"
-            >
-              INITIALIZE{" "}
-              <ChevronRight className="pointer-events-none ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            {!session ? (
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center px-8 py-4 text-sm font-bold tracking-widest rounded-lg text-white bg-purple-600 hover:bg-purple-700 dark:bg-[#a855f7]/20 dark:hover:bg-[#a855f7]/30 border border-purple-600 dark:border-[#a855f7]/30 shadow-[0_0_20px_rgba(168, 85, 247,0.3)] dark:shadow-[0_0_20px_rgba(168, 85, 247,0.15)] transition-all group"
+              >
+                INITIALIZE{" "}
+                <ChevronRight className="pointer-events-none ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            ) : (
+              <Link
+                href={(session.user as any)?.role === "ADMIN" ? "/admin" : (session.user as any)?.role === "TRAINER" ? "/trainer" : "/trainee"}
+                className="inline-flex items-center justify-center px-8 py-4 text-sm font-bold tracking-widest rounded-lg text-white bg-purple-600 hover:bg-purple-700 dark:bg-[#a855f7]/20 dark:hover:bg-[#a855f7]/30 border border-purple-600 dark:border-[#a855f7]/30 shadow-[0_0_20px_rgba(168, 85, 247,0.3)] dark:shadow-[0_0_20px_rgba(168, 85, 247,0.15)] transition-all group"
+              >
+                DASHBOARD{" "}
+                <ChevronRight className="pointer-events-none ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            )}
             <Link
               href="/courses"
               className="inline-flex items-center justify-center px-8 py-4 text-sm font-bold tracking-widest rounded-lg border transition-all hover:bg-black/5 dark:hover:bg-white/5"
@@ -109,19 +153,25 @@ export default function Home() {
                 </h3>
               </div>
               <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-4 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
-                    <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#a855f7] shrink-0 shadow-[0_0_8px_rgba(168, 85, 247,0.8)]" />
-                    <div>
-                      <h4 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-                        System Update v{i}.0
-                      </h4>
-                      <p className="text-xs mt-1 font-mono" style={{ color: "var(--text-muted)" }}>
-                        T-{i * 2} HOURS
-                      </p>
+                {loading ? (
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>Syncing network...</p>
+                ) : announcements.length > 0 ? (
+                  announcements.map((ann: any) => (
+                    <div key={ann.id} className="flex gap-4 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                      <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#a855f7] shrink-0 shadow-[0_0_8px_rgba(168, 85, 247,0.8)]" />
+                      <div>
+                        <h4 className="font-semibold text-sm line-clamp-1" style={{ color: "var(--text-primary)" }}>
+                          {ann.title}
+                        </h4>
+                        <p className="text-xs mt-1 font-mono" style={{ color: "var(--text-muted)" }}>
+                          {new Date(ann.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>No broadcasts active.</p>
+                )}
               </div>
             </motion.div>
 
@@ -135,19 +185,25 @@ export default function Home() {
                 </h3>
               </div>
               <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-4 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
-                    <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#10b981] shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                    <div>
-                      <h4 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-                        Module {i} Online
-                      </h4>
-                      <p className="text-xs mt-1 font-mono" style={{ color: "var(--text-muted)" }}>
-                        99.{9 - i}% UPTIME
-                      </p>
+                {loading ? (
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>Verifying nodes...</p>
+                ) : allModules.length > 0 ? (
+                  allModules.map((mod: any, i: number) => (
+                    <div key={mod.id || i} className="flex gap-4 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                      <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#10b981] shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                      <div>
+                        <h4 className="font-semibold text-sm line-clamp-1" style={{ color: "var(--text-primary)" }}>
+                          {mod.title || `Module ${i + 1}`}
+                        </h4>
+                        <p className="text-xs mt-1 font-mono text-[#10b981]">
+                          ONLINE
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>Nodes offline.</p>
+                )}
               </div>
             </motion.div>
 
@@ -161,21 +217,27 @@ export default function Home() {
                 </h3>
               </div>
               <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-3 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
-                    <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 border" style={{ background: "var(--card)", borderColor: "var(--border-light)" }}>
-                      <BookOpen className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                {loading ? (
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>Connecting stream...</p>
+                ) : courses.length > 0 ? (
+                  courses.map((course: any) => (
+                    <div key={course.id} className="flex gap-3 p-2 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                      <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 border" style={{ background: "var(--card)", borderColor: "var(--border-light)" }}>
+                        <BookOpen className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <h4 className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                          {course.title}
+                        </h4>
+                        <p className="text-xs mt-1 font-mono truncate" style={{ color: "var(--text-muted)" }}>
+                          ID: 0x{course.id.substring(course.id.length - 4).toUpperCase()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>
-                        Advanced Protocols
-                      </h4>
-                      <p className="text-xs mt-1 font-mono truncate" style={{ color: "var(--text-muted)" }}>
-                        ID: 0x{i}F9A
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>No data available.</p>
+                )}
               </div>
             </motion.div>
           </motion.div>

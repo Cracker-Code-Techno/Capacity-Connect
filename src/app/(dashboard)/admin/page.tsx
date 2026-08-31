@@ -112,14 +112,14 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen relative" style={{ background: "var(--background)" }}>
       {/* Background decorations */}
-      <div className="absolute top-0 right-0 w-[40%] h-[40%] rounded-full bg-red-500/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[30%] h-[30%] rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[40%] h-[40%] rounded-full bg-[#a855f7]/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[30%] h-[30%] rounded-full bg-purple-600/5 blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         
         {/* Header */}
         <div className="mb-10 border-b pb-6" style={{ borderColor: "var(--border-light)" }}>
-          <p className="text-xs font-bold tracking-widest font-mono mb-1 text-red-500">
+          <p className="text-xs font-bold tracking-widest font-mono mb-1 text-[#a855f7]">
             DASHBOARD / SYSTEM ADMIN
           </p>
           <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: "var(--text-primary)" }}>
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
                   required
                   value={announcementTitle}
                   onChange={e => setAnnouncementTitle(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                  className="w-full px-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50"
                   style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
                   placeholder="E.g., Scheduled Maintenance"
                 />
@@ -173,7 +173,7 @@ export default function AdminDashboard() {
                   required
                   value={announcementContent}
                   onChange={e => setAnnouncementContent(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/50 flex-grow min-h-[120px] resize-none"
+                  className="w-full px-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50 flex-grow min-h-[120px] resize-none"
                   style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
                   placeholder="Write your broadcast message here..."
                 />
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
               <button 
                 type="submit"
                 disabled={isPublishing}
-                className="w-full py-3 mt-2 rounded-lg font-bold text-white transition-all bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
+                className="w-full py-3 mt-2 rounded-lg font-bold text-white transition-all bg-purple-600 hover:bg-purple-700 disabled:opacity-50 tracking-widest text-sm"
               >
                 {isPublishing ? "Publishing..." : "Publish Broadcast"}
               </button>
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
                 placeholder="Search users..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full pl-10 pr-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50"
                 style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
               />
             </div>
@@ -238,7 +238,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
-                        {user.role === "ADMIN" && <ShieldAlert className="w-4 h-4 text-red-500" title="Admin User" />}
+                        {user.role === "ADMIN" && <ShieldAlert className="w-4 h-4 text-rose-500" title="Admin User" />}
                         {user.role === "TRAINER" && <CheckCircle2 className="w-4 h-4 text-purple-500" title="Approved Trainer" />}
                         
                         <select
