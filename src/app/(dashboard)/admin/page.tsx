@@ -20,18 +20,6 @@ export default function AdminDashboard() {
   const [announcementContent, setAnnouncementContent] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    } else if (status === "authenticated") {
-      if ((session?.user as any)?.role !== "ADMIN") {
-        router.push("/");
-      } else {
-        fetchData();
-      }
-    }
-  }, [status, session, router]);
-
   const fetchData = async () => {
     try {
       const [statsRes, usersRes] = await Promise.all([
@@ -46,6 +34,18 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    } else if (status === "authenticated") {
+      if ((session?.user as any)?.role !== "ADMIN") {
+        router.push("/");
+      } else {
+        fetchData();
+      }
+    }
+  }, [status, session, router]);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setRoleUpdating(userId);
@@ -238,8 +238,8 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
-                        {user.role === "ADMIN" && <ShieldAlert className="w-4 h-4 text-rose-500" title="Admin User" />}
-                        {user.role === "TRAINER" && <CheckCircle2 className="w-4 h-4 text-purple-500" title="Approved Trainer" />}
+                        {user.role === "ADMIN" && <span title="Admin User"><ShieldAlert className="w-4 h-4 text-rose-500" /></span>}
+                        {user.role === "TRAINER" && <span title="Approved Trainer"><CheckCircle2 className="w-4 h-4 text-purple-500" /></span>}
                         
                         <select
                           value={user.role}
