@@ -1,17 +1,39 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import ModuleCard from "./ModuleCard";
 import AssessmentCard from "./AssessmentCard";
+interface ModuleData {
+  id?: string;
+  [key: string]: unknown;
+}
+
+interface AssessmentData {
+  id?: string;
+  [key: string]: unknown;
+}
+
+interface CourseData {
+  id?: string;
+  title?: string;
+  description?: string;
+  modules?: ModuleData[];
+  assessments?: AssessmentData[];
+  _count?: {
+    modules?: number;
+    assessments?: number;
+    enrollments?: number;
+  };
+}
 
 export default function CourseManagementPage({ params }: { params: Promise<{ courseId: string }> | { courseId: string } }) {
   const { data: session } = useSession();
   const router = useRouter();
-  const [course, setCourse] = useState<any>(null);
+  const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Resolve params
@@ -80,8 +102,8 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
       setModuleData({ title: "", content: "" });
       setShowModuleForm(false);
       fetchCourse();
-    } catch (err: any) {
-      alert(err.message || "Failed to add module");
+    } catch (err: unknown) {
+      alert((err as Error).message || "Failed to add module");
     } finally {
       setModuleLoading(false);
     }
@@ -124,8 +146,8 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
       setQuestions([{ text: "", options: [{ text: "", isCorrect: true }, { text: "", isCorrect: false }] }]);
       setShowAssessmentForm(false);
       fetchCourse();
-    } catch (err: any) {
-      alert(err.message || "Failed to save assessment");
+    } catch (err: unknown) {
+      alert((err as Error).message || "Failed to save assessment");
     } finally {
       setAssessmentLoading(false);
     }
@@ -238,7 +260,7 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
                   <p>No modules have been added to this course yet.</p>
                 </div>
               ) : (
-                course.modules.map((mod: any, index: number) => (
+                course.modules.map((mod: ModuleData, index: number) => (
                   <ModuleCard key={mod.id || index} mod={mod} index={index} onRefresh={fetchCourse} />
                 ))
               )}
@@ -346,7 +368,7 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
                   <p>No assessments have been added to this course yet.</p>
                 </div>
               ) : (
-                course.assessments.map((assessment: any) => (
+                course.assessments.map((assessment: AssessmentData) => (
                   <AssessmentCard key={assessment.id} assessment={assessment} onRefresh={fetchCourse} />
                 ))
               )}
