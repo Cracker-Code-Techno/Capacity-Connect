@@ -15,6 +15,11 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null);
 
+  // Announcements State
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementContent, setAnnouncementContent] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -60,6 +65,31 @@ export default function AdminDashboard() {
       console.error(err);
     } finally {
       setRoleUpdating(null);
+    }
+  };
+
+  const handlePublishAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!announcementTitle || !announcementContent) return;
+
+    setIsPublishing(true);
+    try {
+      const res = await fetch("/api/announcements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: announcementTitle, content: announcementContent }),
+      });
+      if (res.ok) {
+        setAnnouncementTitle("");
+        setAnnouncementContent("");
+        alert("Announcement published successfully to all users!");
+      } else {
+        alert("Failed to publish announcement");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -115,10 +145,53 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* User Management Section */}
-        <div className="glass-panel rounded-2xl border border-[rgba(255,255,255,0.05)] overflow-hidden">
-          
-          <div className="p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4" style={{ borderColor: "var(--border-light)" }}>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-10">
+          {/* CMS: Post Announcement */}
+          <div className="xl:col-span-1 glass-panel rounded-2xl border border-[rgba(255,255,255,0.05)] overflow-hidden flex flex-col">
+            <div className="p-6 border-b" style={{ borderColor: "var(--border-light)" }}>
+              <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                Broadcast Message
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Publish an announcement to all users.</p>
+            </div>
+            <form onSubmit={handlePublishAnnouncement} className="p-6 flex flex-col gap-4 flex-grow">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: "var(--text-muted)" }}>Title</label>
+                <input 
+                  type="text" 
+                  required
+                  value={announcementTitle}
+                  onChange={e => setAnnouncementTitle(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                  style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                  placeholder="E.g., Scheduled Maintenance"
+                />
+              </div>
+              <div className="flex-grow flex flex-col">
+                <label className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: "var(--text-muted)" }}>Message</label>
+                <textarea 
+                  required
+                  value={announcementContent}
+                  onChange={e => setAnnouncementContent(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/50 flex-grow min-h-[120px] resize-none"
+                  style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                  placeholder="Write your broadcast message here..."
+                />
+              </div>
+              <button 
+                type="submit"
+                disabled={isPublishing}
+                className="w-full py-3 mt-2 rounded-lg font-bold text-white transition-all bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
+              >
+                {isPublishing ? "Publishing..." : "Publish Broadcast"}
+              </button>
+            </form>
+          </div>
+
+          {/* User Management Section */}
+          <div className="xl:col-span-2 glass-panel rounded-2xl border border-[rgba(255,255,255,0.05)] overflow-hidden">
+            
+            <div className="p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4" style={{ borderColor: "var(--border-light)" }}>
             <h2 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>User Directory</h2>
             
             <div className="relative max-w-xs w-full">
@@ -199,6 +272,7 @@ export default function AdminDashboard() {
             </table>
           </div>
           
+        </div>
         </div>
 
       </div>
