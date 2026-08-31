@@ -5,12 +5,33 @@ import { Users, BookOpen, GraduationCap, Activity, Search, ShieldAlert, CheckCir
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
+interface AdminStats {
+  totalUsers: number;
+  totalTrainers: number;
+  totalCourses: number;
+  totalEnrollments: number;
+}
+
+interface UserCount {
+  createdCourses?: number;
+  enrollments?: number;
+}
+
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string | Date;
+  _count?: UserCount;
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [stats, setStats] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null);
@@ -20,26 +41,26 @@ export default function AdminDashboard() {
   const [announcementContent, setAnnouncementContent] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const fetchData = async () => {
-    try {
-      const [statsRes, usersRes] = await Promise.all([
-        fetch("/api/admin/stats"),
-        fetch("/api/admin/users")
-      ]);
-      setStats(await statsRes.json());
-      setUsers(await usersRes.json());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsRes, usersRes] = await Promise.all([
+          fetch("/api/admin/stats"),
+          fetch("/api/admin/users")
+        ]);
+        setStats(await statsRes.json());
+        setUsers(await usersRes.json());
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (status === "authenticated") {
-      if ((session?.user as any)?.role !== "ADMIN") {
+      if ((session?.user as { role?: string })?.role !== "ADMIN") {
         router.push("/");
       } else {
         fetchData();
