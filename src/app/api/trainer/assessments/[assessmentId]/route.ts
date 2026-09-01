@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function DELETE(
   req: Request,
@@ -9,31 +8,27 @@ export async function DELETE(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as any).role !== "TRAINER") {
+    if (!user || (user.role !== "TRAINER" && user.role !== "ADMIN")) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
 
     const assessmentId = params.assessmentId;
 
     // Verify ownership via course
     const existingAssessment = await prisma.assessment.findUnique({
       where: { id: assessmentId },
-      include: { course: true }
+      include: { course: true },
     });
 
     if (!existingAssessment) return new NextResponse("Not Found", { status: 404 });
-    if (existingAssessment.course.trainerId !== user.id) return new NextResponse("Unauthorized", { status: 401 });
+    if (user.role !== "ADMIN" && existingAssessment.course.trainerId !== user.id) {
+      return new NextResponse("Unauthorized", { status: 403 });
+    }
 
     const deletedAssessment = await prisma.assessment.delete({
-      where: { id: assessmentId }
+      where: { id: assessmentId },
     });
 
     return NextResponse.json(deletedAssessment);
@@ -42,3 +37,4 @@ export async function DELETE(
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+

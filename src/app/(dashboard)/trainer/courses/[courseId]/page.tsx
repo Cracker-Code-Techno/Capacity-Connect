@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import ModuleCard from "./ModuleCard";
 import AssessmentCard from "./AssessmentCard";
 
@@ -52,14 +53,18 @@ export default function CourseManagementPage({
 }: {
   params: Promise<{ courseId: string }> | { courseId: string };
 }) {
+  const searchParams = useSearchParams();
   const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
+
 
   // Resolve params
   const [courseId, setCourseId] = useState<string>("");
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<"modules" | "assessments">("modules");
+  const initialTab = searchParams?.get("tab") === "assessments" ? "assessments" : "modules";
+  const [activeTab, setActiveTab] = useState<"modules" | "assessments">(initialTab);
+
 
   // Module State
   const [showModuleForm, setShowModuleForm] = useState(false);

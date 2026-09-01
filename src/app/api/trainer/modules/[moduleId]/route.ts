@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function PUT(
   req: Request,
@@ -9,17 +8,11 @@ export async function PUT(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as { role?: string }).role !== "TRAINER") {
+    if (!user || (user.role !== "TRAINER" && user.role !== "ADMIN")) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
 
     const moduleId = params.moduleId;
     const { title, content } = await req.json();
@@ -31,15 +24,17 @@ export async function PUT(
     // Verify ownership via course
     const existingModule = await prisma.courseModule.findUnique({
       where: { id: moduleId },
-      include: { course: true }
+      include: { course: true },
     });
 
     if (!existingModule) return new NextResponse("Not Found", { status: 404 });
-    if (existingModule.course.trainerId !== user.id) return new NextResponse("Unauthorized", { status: 401 });
+    if (user.role !== "ADMIN" && existingModule.course.trainerId !== user.id) {
+      return new NextResponse("Unauthorized", { status: 403 });
+    }
 
     const updatedModule = await prisma.courseModule.update({
       where: { id: moduleId },
-      data: { title, content }
+      data: { title, content },
     });
 
     return NextResponse.json(updatedModule);
@@ -55,31 +50,27 @@ export async function DELETE(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as { role?: string }).role !== "TRAINER") {
+    if (!user || (user.role !== "TRAINER" && user.role !== "ADMIN")) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
 
     const moduleId = params.moduleId;
 
     // Verify ownership via course
     const existingModule = await prisma.courseModule.findUnique({
       where: { id: moduleId },
-      include: { course: true }
+      include: { course: true },
     });
 
     if (!existingModule) return new NextResponse("Not Found", { status: 404 });
-    if (existingModule.course.trainerId !== user.id) return new NextResponse("Unauthorized", { status: 401 });
+    if (user.role !== "ADMIN" && existingModule.course.trainerId !== user.id) {
+      return new NextResponse("Unauthorized to delete this module", { status: 403 });
+    }
 
     const deletedModule = await prisma.courseModule.delete({
-      where: { id: moduleId }
+      where: { id: moduleId },
     });
 
     return NextResponse.json(deletedModule);
@@ -88,3 +79,4 @@ export async function DELETE(
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+

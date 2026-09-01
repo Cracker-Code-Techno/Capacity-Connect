@@ -68,6 +68,13 @@ export default function AdminDashboard() {
     }
   }, [status, session, router]);
 
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const handleRoleChange = async (userId: string, newRole: string) => {
     setRoleUpdating(userId);
     try {
@@ -78,12 +85,14 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         // Optimistic UI update
-        setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+        setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+        showToast(`User role updated to ${newRole} successfully.`);
       } else {
-        alert("Failed to update role");
+        showToast("Failed to update user role", "error");
       }
     } catch (err) {
       console.error(err);
+      showToast("Network error while updating role", "error");
     } finally {
       setRoleUpdating(null);
     }
@@ -103,20 +112,62 @@ export default function AdminDashboard() {
       if (res.ok) {
         setAnnouncementTitle("");
         setAnnouncementContent("");
-        alert("Announcement published successfully to all users!");
+        showToast("Announcement published successfully to all users!");
       } else {
-        alert("Failed to publish announcement");
+        showToast("Failed to publish announcement", "error");
       }
     } catch (err) {
       console.error(err);
+      showToast("Network error while publishing announcement", "error");
     } finally {
       setIsPublishing(false);
     }
   };
 
+
   if (loading) {
-    return <div className="p-12 text-center" style={{ color: "var(--text-primary)" }}>Loading Admin Console...</div>;
+    return (
+      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
+        <div className="max-w-7xl mx-auto space-y-10 animate-pulse">
+          <div className="space-y-2 border-b pb-6" style={{ borderColor: "var(--border-light)" }}>
+            <div className="h-4 w-32 bg-[#a855f7]/20 rounded" />
+            <div className="h-8 w-64 bg-white/10 dark:bg-white/10 rounded" />
+            <div className="h-4 w-96 bg-white/5 rounded" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="glass-panel p-6 rounded-xl border border-[rgba(255,255,255,0.05)] h-28 flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="h-3 w-20 bg-white/10 rounded" />
+                  <div className="h-7 w-12 bg-white/20 rounded" />
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-white/5" />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-1 glass-panel rounded-2xl border border-[rgba(255,255,255,0.05)] h-96 p-6 space-y-4">
+              <div className="h-5 w-40 bg-white/10 rounded" />
+              <div className="h-10 w-full bg-white/5 rounded-lg" />
+              <div className="h-32 w-full bg-white/5 rounded-lg" />
+              <div className="h-10 w-full bg-[#a855f7]/20 rounded-lg" />
+            </div>
+            <div className="xl:col-span-2 glass-panel rounded-2xl border border-[rgba(255,255,255,0.05)] h-96 p-6 space-y-4">
+              <div className="h-5 w-32 bg-white/10 rounded" />
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((row) => (
+                  <div key={row} className="h-12 w-full bg-white/5 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
+
 
   const statCards = [
     { label: "Total Users", value: stats?.totalUsers || 0, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -297,6 +348,24 @@ export default function AdminDashboard() {
         </div>
 
       </div>
+
+      {/* Floating toast notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-semibold border backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300 ${
+            toast.type === "success"
+              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+              : "bg-rose-500/15 border-rose-500/30 text-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.2)]"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          ) : (
+            <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }

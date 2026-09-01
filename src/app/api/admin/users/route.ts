@@ -1,48 +1,83 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions, getUserFromSession } from "@/lib/auth";
 
-export async function GET() {
+
+export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as any).role !== "ADMIN") {
+    if (!user || user.role !== "ADMIN") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const search = searchParams.get("search") || "";
 
-    const courses = await prisma.course.findMany({
-      select: { trainerId: true }
-    });
+    const skip = (page - 1) * limit;
 
-    const enrollments = await prisma.enrollment.findMany({
-      select: { userId: true }
-    });
-
-    const usersWithCounts = users.map(user => {
-      const createdCourses = courses.filter((c: any) => c.trainerId === user.id).length;
-      const userEnrollments = enrollments.filter((e: any) => e.userId === user.id).length;
-      return {
-        ...user,
-        _count: {
-          enrollments: userEnrollments,
-          createdCourses
+    const where = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+          ],
         }
-      };
+      : {};
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip: searchParams.has("page") ? skip : undefined,
+        take: searchParams.has("limit") ? limit : undefined,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          _count: {
+            select: {
+              enrollments: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    // Fetch course counts separately
+    const courseCounts = await prisma.course.groupBy({
+      by: ["trainerId"],
+      _count: { id: true },
     });
+    const courseCountMap = Object.fromEntries(
+      courseCounts.map((c) => [c.trainerId, c._count.id])
+    );
+
+    const usersWithCounts = users.map((u) => ({
+      ...u,
+      _count: {
+        enrollments: u._count.enrollments,
+        createdCourses: courseCountMap[u.id] ?? 0,
+      },
+    }));
+
+    if (searchParams.has("page") || searchParams.has("limit")) {
+      return NextResponse.json({
+        data: usersWithCounts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    }
 
     return NextResponse.json(usersWithCounts);
   } catch (error) {
@@ -50,6 +85,8 @@ export async function GET() {
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+
+
 
 export async function PUT(req: Request) {
   try {

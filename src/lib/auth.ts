@@ -1,5 +1,6 @@
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, Session } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { getServerSession } from "next-auth/next";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 
@@ -16,19 +17,15 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        console.log("Login attempt for:", credentials.email);
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         });
 
         if (!user || !user.password) {
-          console.log("User not found or no password");
           throw new Error("Invalid email or password");
         }
 
         const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password);
-        console.log("Password correct?", isPasswordCorrect);
-
         if (!isPasswordCorrect) {
           throw new Error("Invalid email or password");
         }
@@ -66,3 +63,14 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
+
+/**
+ * Shared helper — fetches the current session and resolves it to the DB user
+ * in a single call. Returns null if unauthenticated or user not found.
+ * Use this in API routes instead of repeating getServerSession + findUnique.
+ */
+export async function getUserFromSession(session?: Session | null) {
+  const s = session ?? (await getServerSession(authOptions));
+  if (!s?.user?.email) return null;
+  return prisma.user.findUnique({ where: { email: s.user.email } });
+}

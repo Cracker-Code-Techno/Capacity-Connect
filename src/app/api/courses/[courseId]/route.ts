@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function GET(
   req: Request,
@@ -9,16 +8,22 @@ export async function GET(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
     const course = await prisma.course.findUnique({
       where: { id: params.courseId },
       include: {
         modules: {
-          orderBy: { order: 'asc' }
+          orderBy: { order: "asc" },
         },
-        assessments: true
-      }
+        assessments: {
+          select: {
+            id: true,
+            title: true,
+            createdAt: true,
+          },
+        },
+      },
     });
 
     if (!course) {
@@ -26,27 +31,46 @@ export async function GET(
     }
 
     let isEnrolled = false;
+    let hasFullAccess = false;
 
-    if (session?.user?.email) {
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email }
-      });
-      if (user) {
+    if (user) {
+      // Admins and the course creator always have full access
+      if (user.role === "ADMIN" || course.trainerId === user.id) {
+        isEnrolled = true;
+        hasFullAccess = true;
+      } else {
         const enrollment = await prisma.enrollment.findUnique({
           where: {
             userId_courseId: {
               userId: user.id,
-              courseId: course.id
-            }
-          }
+              courseId: course.id,
+            },
+          },
         });
         isEnrolled = !!enrollment;
+        hasFullAccess = isEnrolled;
       }
     }
 
-    return NextResponse.json({ course, isEnrolled });
+    // Gate content: If not enrolled or authorized, hide the lecture content
+    const sanitizedModules = course.modules.map((m) => ({
+      id: m.id,
+      title: m.title,
+      order: m.order,
+      courseId: m.courseId,
+      content: hasFullAccess ? m.content : "", // Redacted for non-enrolled users
+    }));
+
+    return NextResponse.json({
+      course: {
+        ...course,
+        modules: sanitizedModules,
+      },
+      isEnrolled,
+    });
   } catch (error) {
     console.error("[COURSE_DETAILS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+

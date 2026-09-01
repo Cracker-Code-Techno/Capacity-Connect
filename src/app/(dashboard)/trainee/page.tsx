@@ -51,7 +51,7 @@ export default async function TraineeDashboard() {
     { label: "Enrolled Courses", value: enrollments.length.toString(), icon: BookOpen },
     { label: "Completed", value: completedCount.toString(), icon: Award },
     { label: "Active", value: activeCount.toString(), icon: PlayCircle },
-    { label: "Certificates", value: "0", icon: GraduationCap },
+    { label: "Certificates", value: completedCount.toString(), icon: GraduationCap },
   ];
 
   return (

@@ -17,9 +17,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CAPACITY CONNECT",
-  description: "Digital Capacity Building and Learning Management Portal",
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://capacity-connect.vercel.app"),
+  title: {
+    default: "Capacity Connect | Digital Capacity Building & Learning Portal",
+    template: "%s | Capacity Connect",
+  },
+  description:
+    "Empower your workforce with enterprise digital capacity building, interactive learning modules, skill tracking, and verified certifications.",
+  keywords: [
+    "capacity building",
+    "learning management system",
+    "training portal",
+    "employee development",
+    "skill certification",
+  ],
+  authors: [{ name: "Capacity Connect Team" }],
+  openGraph: {
+    title: "Capacity Connect | Digital Capacity Building",
+    description:
+      "Enterprise digital capacity building and interactive learning management system.",
+    url: "https://capacity-connect.vercel.app",
+    siteName: "Capacity Connect",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Capacity Connect",
+    description:
+      "Enterprise digital capacity building and interactive learning management system.",
+  },
 };
+
 
 export default function RootLayout({
   children,

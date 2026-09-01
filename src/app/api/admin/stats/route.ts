@@ -13,20 +13,25 @@ export async function GET() {
 
     const [
       totalUsers,
+      totalAdmins,
       totalTrainers,
+      totalTrainees,
       totalCourses,
       totalEnrollments,
     ] = await Promise.all([
       prisma.user.count(),
+      prisma.user.count({ where: { role: "ADMIN" } }),
       prisma.user.count({ where: { role: "TRAINER" } }),
+      prisma.user.count({ where: { role: "TRAINEE" } }),
       prisma.course.count(),
       prisma.enrollment.count(),
     ]);
 
     return NextResponse.json({
       totalUsers,
+      totalAdmins,
       totalTrainers,
-      totalTrainees: totalUsers - totalTrainers, // Rough estimate ignoring other admins
+      totalTrainees,
       totalCourses,
       totalEnrollments,
     });

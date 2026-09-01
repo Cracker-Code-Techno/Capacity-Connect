@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function GET(
   req: Request,
@@ -9,9 +8,9 @@ export async function GET(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email) {
+    if (!user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -22,16 +21,28 @@ export async function GET(
         questions: {
           include: {
             options: {
-              select: { id: true, text: true, questionId: true } // Omit isCorrect
-            }
-          }
-        }
-      }
+              select: { id: true, text: true, questionId: true }, // Omit isCorrect
+            },
+          },
+        },
+      },
     });
 
     if (!assessment) return new NextResponse("Assessment not found", { status: 404 });
 
-    return NextResponse.json(assessment);
+    // Fetch prior attempts by this user if any
+    const priorAttempts = await prisma.assessmentAttempt.findMany({
+      where: {
+        userId: user.id,
+        assessmentId: assessment.id,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({
+      ...assessment,
+      attempts: priorAttempts,
+    });
   } catch (error) {
     console.error("[ASSESSMENT_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
@@ -44,22 +55,16 @@ export async function POST(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email) {
+    if (!user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
 
     const body = await req.json();
     const { answers } = body; // Map of questionId -> optionId
 
-    if (!answers || typeof answers !== 'object') {
+    if (!answers || typeof answers !== "object") {
       return new NextResponse("Invalid answers format", { status: 400 });
     }
 
@@ -69,10 +74,10 @@ export async function POST(
       include: {
         questions: {
           include: {
-            options: true
-          }
-        }
-      }
+            options: true,
+          },
+        },
+      },
     });
 
     if (!assessment) return new NextResponse("Assessment not found", { status: 404 });
@@ -80,10 +85,14 @@ export async function POST(
     let correctCount = 0;
     const totalQuestions = assessment.questions.length;
 
+    if (totalQuestions === 0) {
+      return new NextResponse("Assessment has no questions", { status: 400 });
+    }
+
     // Grade the assessment
     assessment.questions.forEach((question) => {
       const selectedOptionId = answers[question.id];
-      const correctOption = question.options.find(o => o.isCorrect);
+      const correctOption = question.options.find((o) => o.isCorrect);
       if (correctOption && selectedOptionId === correctOption.id) {
         correctCount++;
       }
@@ -98,19 +107,34 @@ export async function POST(
         userId: user.id,
         assessmentId: assessment.id,
         score: scorePercentage,
-        passed: passed
-      }
+        passed: passed,
+      },
     });
+
+    // If passed, update enrollment status & progress
+    if (passed) {
+      await prisma.enrollment.updateMany({
+        where: {
+          userId: user.id,
+          courseId: assessment.courseId,
+        },
+        data: {
+          progress: 100,
+          status: "COMPLETED",
+        },
+      });
+    }
 
     return NextResponse.json({
       score: scorePercentage,
       passed,
       correctCount,
       totalQuestions,
-      attemptId: attempt.id
+      attemptId: attempt.id,
     });
   } catch (error) {
     console.error("[ASSESSMENT_SUBMIT]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+

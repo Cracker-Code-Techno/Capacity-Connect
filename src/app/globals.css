@@ -3,6 +3,7 @@
 :root {
   /* Dark default */
   --background: #050810;
+  --bg-gradient: radial-gradient(circle at 50% 0%, #101628 0%, #050810 70%);
   --foreground: #e8ecf4;
   
   --panel: rgba(11, 16, 28, 0.65);
@@ -24,7 +25,8 @@
 
 /* Light mode overrides */
 .light {
-  --background: linear-gradient(135deg, #f0f4ff 0%, #fafafa 40%, #f5f0ff 100%);
+  --background: #f8fafc;
+  --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #fafafa 40%, #f5f0ff 100%);
   --foreground: #0f172a;
   --panel: rgba(255, 255, 255, 0.75);
   --panel-solid: rgba(255, 255, 255, 0.9);
@@ -46,6 +48,8 @@
 
 body {
   background: var(--background);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
 }

@@ -79,7 +79,18 @@ export default function CourseCard({ course }: { course: any }) {
           >
             <Trash2 className="w-4 h-4" />
           </button>
-          <Link href={`/trainer/courses/${course.id}`} className="p-2 bg-[#a855f7]/10 hover:bg-[#a855f7]/20 text-[#a855f7] rounded-lg transition-colors border border-[#a855f7]/20" title="Manage Content">
+          <Link
+            href={`/trainer/courses/${course.id}?tab=assessments`}
+            className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors border border-emerald-500/20 text-xs font-bold"
+            title="Manage Assessments"
+          >
+            Quizzes
+          </Link>
+          <Link
+            href={`/trainer/courses/${course.id}`}
+            className="p-2 bg-[#a855f7]/10 hover:bg-[#a855f7]/20 text-[#a855f7] rounded-lg transition-colors border border-[#a855f7]/20 text-xs font-bold"
+            title="Manage Content"
+          >
             Manage
           </Link>
         </div>

@@ -19,7 +19,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed w-full z-50 top-0 start-0 border-b border-[rgba(255,255,255,0.06)] bg-[#0b101c]/80 backdrop-blur-xl">
+    <nav className="fixed w-full z-50 top-0 start-0 border-b border-[rgba(255,255,255,0.06)] dark:border-[rgba(255,255,255,0.06)] bg-white/80 dark:bg-[#0b101c]/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
@@ -98,18 +98,18 @@ export function Navbar() {
             className="md:hidden bg-[#050810] border-b border-[rgba(255,255,255,0.06)] overflow-hidden"
           >
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <Link href="/courses" className="block px-3 py-2 rounded-md text-base font-medium text-[#8b9ab8] hover:text-white hover:bg-[rgba(255,255,255,0.05)]">Courses</Link>
-              <Link href="/about" className="block px-3 py-2 rounded-md text-base font-medium text-[#8b9ab8] hover:text-white hover:bg-[rgba(255,255,255,0.05)]">About Us</Link>
+              <Link href="/courses" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-[#8b9ab8] hover:text-white hover:bg-[rgba(255,255,255,0.05)]">Courses</Link>
+              <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-[#8b9ab8] hover:text-white hover:bg-[rgba(255,255,255,0.05)]">About Us</Link>
               
               {session ? (
                 <>
-                  <Link href={getDashboardLink()} className="block px-3 py-2 rounded-md text-base font-medium text-[#e8ecf4] hover:text-[#a855f7] hover:bg-[rgba(255,255,255,0.05)]">Dashboard</Link>
-                  <button onClick={() => signOut({ callbackUrl: "/" })} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-red-500/10">Logout</button>
+                  <Link href={getDashboardLink()} onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-[#e8ecf4] hover:text-[#a855f7] hover:bg-[rgba(255,255,255,0.05)]">Dashboard</Link>
+                  <button onClick={() => { signOut({ callbackUrl: "/" }); setIsMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-red-500/10">Logout</button>
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="block px-3 py-2 rounded-md text-base font-medium text-[#8b9ab8] hover:text-white hover:bg-[rgba(255,255,255,0.05)]">Log in</Link>
-                  <Link href="/signup" className="block px-3 py-2 rounded-md text-base font-medium text-[#a855f7] hover:bg-[#a855f7]/10">Sign up</Link>
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-[#8b9ab8] hover:text-white hover:bg-[rgba(255,255,255,0.05)]">Log in</Link>
+                  <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-[#a855f7] hover:bg-[#a855f7]/10">Sign up</Link>
                 </>
               )}
             </div>

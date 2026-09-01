@@ -8,26 +8,12 @@ function sanitizeText(input: string): string {
     .trim();
 }
 
-export async function GET() {
+export async function PUT(
+  req: Request,
+  props: { params: Promise<{ announcementId: string }> }
+) {
   try {
-    const announcements = await prisma.announcement.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        author: {
-          select: { name: true, role: true },
-        },
-      },
-    });
-
-    return NextResponse.json(announcements);
-  } catch (error) {
-    console.error("[ANNOUNCEMENTS_GET]", error);
-    return new NextResponse("Internal Error", { status: 500 });
-  }
-}
-
-export async function POST(req: Request) {
-  try {
+    const params = await props.params;
     const user = await getUserFromSession();
 
     if (!user || user.role !== "ADMIN") {
@@ -47,23 +33,41 @@ export async function POST(req: Request) {
       return new NextResponse("Title or content cannot be empty", { status: 400 });
     }
 
-    const announcement = await prisma.announcement.create({
-      data: {
-        title: cleanTitle,
-        content: cleanContent,
-        authorId: user.id,
-      },
+    const updated = await prisma.announcement.update({
+      where: { id: params.announcementId },
+      data: { title: cleanTitle, content: cleanContent },
       include: {
-        author: {
-          select: { name: true, role: true },
-        },
+        author: { select: { name: true, role: true } },
       },
     });
 
-    return NextResponse.json(announcement);
+    return NextResponse.json(updated);
   } catch (error) {
-    console.error("[ANNOUNCEMENTS_POST]", error);
+    console.error("[ANNOUNCEMENT_UPDATE]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
 
+
+export async function DELETE(
+  req: Request,
+  props: { params: Promise<{ announcementId: string }> }
+) {
+  try {
+    const params = await props.params;
+    const user = await getUserFromSession();
+
+    if (!user || user.role !== "ADMIN") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const deleted = await prisma.announcement.delete({
+      where: { id: params.announcementId },
+    });
+
+    return NextResponse.json(deleted);
+  } catch (error) {
+    console.error("[ANNOUNCEMENT_DELETE]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}

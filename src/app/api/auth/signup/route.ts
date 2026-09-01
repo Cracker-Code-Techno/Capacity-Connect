@@ -1,14 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, role } = await req.json();
+    const ip = getClientIp(req);
+    const limitResult = rateLimit(`signup:${ip}`, { limit: 5, windowMs: 60 * 1000 });
 
-    if (!name || !email || !password || !role) {
+    if (!limitResult.success) {
+      return NextResponse.json(
+        { message: "Too many registration attempts. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "60",
+            "X-RateLimit-Limit": limitResult.limit.toString(),
+            "X-RateLimit-Remaining": limitResult.remaining.toString(),
+          },
+        }
+      );
+    }
+
+    const { name, email, password } = await req.json();
+
+    if (!name || !email || !password) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
+
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -20,12 +39,12 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: role.toUpperCase(), // TRAINEE, TRAINER, ADMIN
+        role: "TRAINEE", // All new accounts start as TRAINEE. Admins can promote via the admin dashboard.
       },
     });
 
