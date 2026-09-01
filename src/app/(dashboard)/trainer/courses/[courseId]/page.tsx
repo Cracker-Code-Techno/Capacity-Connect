@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle } from "lucide-react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import ModuleCard from "./ModuleCard";
 import AssessmentCard from "./AssessmentCard";
+
 interface ModuleData {
   id?: string;
   [key: string]: unknown;
@@ -30,15 +29,35 @@ interface CourseData {
   };
 }
 
-export default function CourseManagementPage({ params }: { params: Promise<{ courseId: string }> | { courseId: string } }) {
-  const { data: session } = useSession();
-  const router = useRouter();
+interface QuestionOption {
+  text: string;
+  isCorrect: boolean;
+}
+
+interface Question {
+  text: string;
+  options: QuestionOption[];
+}
+
+const emptyQuestion = (): Question => ({
+  text: "",
+  options: [
+    { text: "", isCorrect: true },
+    { text: "", isCorrect: false },
+  ],
+});
+
+export default function CourseManagementPage({
+  params,
+}: {
+  params: Promise<{ courseId: string }> | { courseId: string };
+}) {
   const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Resolve params
   const [courseId, setCourseId] = useState<string>("");
-  
+
   // Tabs
   const [activeTab, setActiveTab] = useState<"modules" | "assessments">("modules");
 
@@ -50,40 +69,56 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
   // Assessment State
   const [showAssessmentForm, setShowAssessmentForm] = useState(false);
   const [assessmentTitle, setAssessmentTitle] = useState("");
-  const [questions, setQuestions] = useState([{ text: "", options: [{ text: "", isCorrect: true }, { text: "", isCorrect: false }] }]);
+  const [questions, setQuestions] = useState<Question[]>([emptyQuestion()]);
   const [assessmentLoading, setAssessmentLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const resolveParams = async () => {
       const resolved = await params;
-      setCourseId(resolved.courseId);
+      if (!cancelled) setCourseId(resolved.courseId);
     };
     resolveParams();
+    return () => {
+      cancelled = true;
+    };
   }, [params]);
 
-  const fetchCourse = async () => {
-    if (!courseId) return;
-    try {
-      const res = await fetch(`/api/courses/${courseId}`);
-      if (res.ok) {
-        const data = await res.json();
-        const found = data.course;
-        if (found && !found.modules) found.modules = [];
-        if (found && !found.assessments) found.assessments = [];
-        setCourse(found);
-      } else {
-        console.error("Failed to fetch course details");
+  const loadCourse = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!courseId) return;
+      try {
+        const res = await fetch(`/api/courses/${courseId}`, { signal });
+        if (res.ok) {
+          const data = await res.json();
+          const found = data.course;
+          if (found && !found.modules) found.modules = [];
+          if (found && !found.assessments) found.assessments = [];
+          setCourse(found);
+        } else {
+          console.error("Failed to fetch course details");
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") console.error(err);
+      } finally {
+        if (!signal?.aborted) setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [courseId]
+  );
 
+  // Initial load + reload when courseId changes. The AbortController cleanup
+  // prevents a stale response from an in-flight request overwriting state
+  // after courseId changes again or the component unmounts.
   useEffect(() => {
-    fetchCourse();
-  }, [courseId]);
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional data fetch keyed on courseId; loadCourse guards state updates with the AbortSignal above
+    loadCourse(controller.signal);
+    return () => controller.abort();
+  }, [loadCourse]);
+
+  // Stable no-arg refetch used by handlers (after saving a module/assessment, card refresh, etc.)
+  const fetchCourse = useCallback(() => loadCourse(), [loadCourse]);
 
   const handleAddModule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +130,7 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
         body: JSON.stringify({
           courseId,
           title: moduleData.title,
-          content: moduleData.content
+          content: moduleData.content,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -110,22 +145,42 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
   };
 
   const handleAddQuestion = () => {
-    setQuestions([...questions, { text: "", options: [{ text: "", isCorrect: true }, { text: "", isCorrect: false }] }]);
+    setQuestions((prev) => [...prev, emptyQuestion()]);
   };
 
   const handleAddOption = (qIndex: number) => {
-    const newQs = [...questions];
-    newQs[qIndex].options.push({ text: "", isCorrect: false });
-    setQuestions(newQs);
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIndex ? { ...q, options: [...q.options, { text: "", isCorrect: false }] } : q
+      )
+    );
   };
 
   const handleSetCorrectOption = (qIndex: number, oIndex: number) => {
-    const newQs = [...questions];
-    newQs[qIndex].options = newQs[qIndex].options.map((opt, i) => ({
-      ...opt,
-      isCorrect: i === oIndex
-    }));
-    setQuestions(newQs);
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i !== qIndex
+          ? q
+          : { ...q, options: q.options.map((opt, oi) => ({ ...opt, isCorrect: oi === oIndex })) }
+      )
+    );
+  };
+
+  const handleQuestionTextChange = (qIndex: number, value: string) => {
+    setQuestions((prev) => prev.map((q, i) => (i === qIndex ? { ...q, text: value } : q)));
+  };
+
+  const handleOptionTextChange = (qIndex: number, oIndex: number, value: string) => {
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i !== qIndex
+          ? q
+          : {
+              ...q,
+              options: q.options.map((opt, oi) => (oi === oIndex ? { ...opt, text: value } : opt)),
+            }
+      )
+    );
   };
 
   const handleSaveAssessment = async (e: React.FormEvent) => {
@@ -138,12 +193,12 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
         body: JSON.stringify({
           courseId,
           title: assessmentTitle,
-          questions
+          questions,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
       setAssessmentTitle("");
-      setQuestions([{ text: "", options: [{ text: "", isCorrect: true }, { text: "", isCorrect: false }] }]);
+      setQuestions([emptyQuestion()]);
       setShowAssessmentForm(false);
       fetchCourse();
     } catch (err: unknown) {
@@ -154,7 +209,11 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
   };
 
   if (loading) {
-    return <div className="p-12 text-center" style={{ color: "var(--text-primary)" }}>Loading course...</div>;
+    return (
+      <div className="p-12 text-center" style={{ color: "var(--text-primary)" }}>
+        Loading course...
+      </div>
+    );
   }
 
   if (!course) {
@@ -162,18 +221,27 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
   }
 
   return (
-    <div className="flex-grow flex flex-col py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ background: "var(--background)" }}>
+    <div
+      className="flex-grow flex flex-col py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+      style={{ background: "var(--background)" }}
+    >
       <div className="w-full max-w-5xl mx-auto relative z-10">
-        
-        <Link href="/trainer" className="inline-flex items-center gap-2 text-sm text-[#a855f7] hover:text-purple-400 font-semibold mb-8">
+        <Link
+          href="/trainer"
+          className="inline-flex items-center gap-2 text-sm text-[#a855f7] hover:text-purple-400 font-semibold mb-8"
+        >
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
 
         {/* Header */}
         <div className="glass-panel p-8 rounded-2xl border border-[#a855f7]/20 mb-8">
-          <h1 className="text-3xl font-extrabold mb-2" style={{ color: "var(--text-primary)" }}>{course.title}</h1>
-          <p className="text-sm max-w-3xl mb-6" style={{ color: "var(--text-secondary)" }}>{course.description}</p>
-          
+          <h1 className="text-3xl font-extrabold mb-2" style={{ color: "var(--text-primary)" }}>
+            {course.title}
+          </h1>
+          <p className="text-sm max-w-3xl mb-6" style={{ color: "var(--text-secondary)" }}>
+            {course.description}
+          </p>
+
           <div className="flex gap-6 text-sm">
             <span className="font-mono text-[#a855f7] bg-[#a855f7]/10 px-3 py-1 rounded">
               {course.modules?.length || course._count?.modules || 0} MODULES
@@ -189,19 +257,27 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
 
         {/* Tabs */}
         <div className="flex border-b mb-8 gap-8" style={{ borderColor: "var(--border-light)" }}>
-          <button 
+          <button
             onClick={() => setActiveTab("modules")}
-            className={`pb-4 text-sm font-bold tracking-widest uppercase transition-colors relative ${activeTab === 'modules' ? 'text-[#a855f7]' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`pb-4 text-sm font-bold tracking-widest uppercase transition-colors relative ${
+              activeTab === "modules" ? "text-[#a855f7]" : "text-gray-500 hover:text-gray-300"
+            }`}
           >
             Modules
-            {activeTab === 'modules' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
+            {activeTab === "modules" && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />
+            )}
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab("assessments")}
-            className={`pb-4 text-sm font-bold tracking-widest uppercase transition-colors relative ${activeTab === 'assessments' ? 'text-[#a855f7]' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`pb-4 text-sm font-bold tracking-widest uppercase transition-colors relative ${
+              activeTab === "assessments" ? "text-[#a855f7]" : "text-gray-500 hover:text-gray-300"
+            }`}
           >
             Assessments
-            {activeTab === 'assessments' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
+            {activeTab === "assessments" && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />
+            )}
           </button>
         </div>
 
@@ -212,11 +288,15 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
               <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <LayoutList className="w-5 h-5 text-[#a855f7]" /> Course Modules
               </h2>
-              <button 
+              <button
                 onClick={() => setShowModuleForm(!showModuleForm)}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold tracking-widest transition-all"
               >
-                {showModuleForm ? "CANCEL" : <><Plus className="w-4 h-4" /> ADD MODULE</>}
+                {showModuleForm ? "CANCEL" : (
+                  <>
+                    <Plus className="w-4 h-4" /> ADD MODULE
+                  </>
+                )}
               </button>
             </div>
 
@@ -224,28 +304,50 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
               <div className="glass-panel p-6 rounded-xl border border-[#a855f7]/30 mb-8">
                 <form onSubmit={handleAddModule} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "var(--text-muted)" }}>Module Title</label>
+                    <label
+                      className="block text-xs font-bold tracking-widest uppercase mb-2"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Module Title
+                    </label>
                     <input
                       required
                       className="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50"
-                      style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                      style={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border-light)",
+                        color: "var(--text-primary)",
+                      }}
                       value={moduleData.title}
                       onChange={(e) => setModuleData({ ...moduleData, title: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "var(--text-muted)" }}>Content (Text/Markdown)</label>
+                    <label
+                      className="block text-xs font-bold tracking-widest uppercase mb-2"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Content (Text/Markdown)
+                    </label>
                     <textarea
                       required
                       rows={8}
                       className="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50 resize-y"
-                      style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                      style={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border-light)",
+                        color: "var(--text-primary)",
+                      }}
                       value={moduleData.content}
                       onChange={(e) => setModuleData({ ...moduleData, content: e.target.value })}
                     />
                   </div>
                   <div className="flex justify-end pt-2">
-                    <button type="submit" disabled={moduleLoading} className="px-6 py-2.5 rounded-lg text-sm font-bold tracking-widest text-white bg-purple-600 hover:bg-purple-700 transition-all disabled:opacity-50">
+                    <button
+                      type="submit"
+                      disabled={moduleLoading}
+                      className="px-6 py-2.5 rounded-lg text-sm font-bold tracking-widest text-white bg-purple-600 hover:bg-purple-700 transition-all disabled:opacity-50"
+                    >
                       {moduleLoading ? "SAVING..." : "SAVE MODULE"}
                     </button>
                   </div>
@@ -254,8 +356,11 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
             )}
 
             <div className="space-y-4">
-              {(!course.modules || course.modules.length === 0) ? (
-                <div className="p-8 text-center border border-dashed rounded-xl" style={{ borderColor: "var(--border-light)", color: "var(--text-secondary)" }}>
+              {!course.modules || course.modules.length === 0 ? (
+                <div
+                  className="p-8 text-center border border-dashed rounded-xl"
+                  style={{ borderColor: "var(--border-light)", color: "var(--text-secondary)" }}
+                >
                   <FileText className="w-8 h-8 mx-auto mb-3 opacity-20" />
                   <p>No modules have been added to this course yet.</p>
                 </div>
@@ -275,11 +380,15 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
               <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <HelpCircle className="w-5 h-5 text-emerald-500" /> Assessments
               </h2>
-              <button 
+              <button
                 onClick={() => setShowAssessmentForm(!showAssessmentForm)}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold tracking-widest transition-all"
               >
-                {showAssessmentForm ? "CANCEL" : <><Plus className="w-4 h-4" /> CREATE ASSESSMENT</>}
+                {showAssessmentForm ? "CANCEL" : (
+                  <>
+                    <Plus className="w-4 h-4" /> CREATE ASSESSMENT
+                  </>
+                )}
               </button>
             </div>
 
@@ -287,11 +396,20 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
               <div className="glass-panel p-6 rounded-xl border border-emerald-500/30 mb-8">
                 <form onSubmit={handleSaveAssessment} className="space-y-8">
                   <div>
-                    <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "var(--text-muted)" }}>Assessment Title</label>
+                    <label
+                      className="block text-xs font-bold tracking-widest uppercase mb-2"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Assessment Title
+                    </label>
                     <input
                       required
                       className="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500/50"
-                      style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                      style={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border-light)",
+                        color: "var(--text-primary)",
+                      }}
                       placeholder="e.g. Final Quiz"
                       value={assessmentTitle}
                       onChange={(e) => setAssessmentTitle(e.target.value)}
@@ -302,28 +420,32 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
                     {questions.map((q, qIndex) => (
                       <div key={qIndex} className="p-4 rounded-xl border border-[rgba(255,255,255,0.05)] bg-black/20">
                         <div className="flex justify-between items-center mb-4">
-                          <h4 className="font-bold text-sm text-emerald-500 tracking-widest uppercase">Question {qIndex + 1}</h4>
+                          <h4 className="font-bold text-sm text-emerald-500 tracking-widest uppercase">
+                            Question {qIndex + 1}
+                          </h4>
                         </div>
                         <input
                           required
                           placeholder="Enter your question here..."
                           className="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 mb-4"
-                          style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
-                          value={q.text}
-                          onChange={(e) => {
-                            const newQs = [...questions];
-                            newQs[qIndex].text = e.target.value;
-                            setQuestions(newQs);
+                          style={{
+                            background: "var(--card)",
+                            border: "1px solid var(--border-light)",
+                            color: "var(--text-primary)",
                           }}
+                          value={q.text}
+                          onChange={(e) => handleQuestionTextChange(qIndex, e.target.value)}
                         />
-                        
+
                         <div className="space-y-2 pl-4 border-l-2 border-[rgba(255,255,255,0.05)]">
                           {q.options.map((opt, oIndex) => (
                             <div key={oIndex} className="flex items-center gap-3">
                               <button
                                 type="button"
                                 onClick={() => handleSetCorrectOption(qIndex, oIndex)}
-                                className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${opt.isCorrect ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'}`}
+                                className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                                  opt.isCorrect ? "bg-emerald-500 border-emerald-500" : "border-gray-500"
+                                }`}
                               >
                                 {opt.isCorrect && <CheckCircle className="w-3 h-3 text-white" />}
                               </button>
@@ -331,17 +453,21 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
                                 required
                                 placeholder={`Option ${oIndex + 1}`}
                                 className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500/50"
-                                style={{ background: "var(--background)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
-                                value={opt.text}
-                                onChange={(e) => {
-                                  const newQs = [...questions];
-                                  newQs[qIndex].options[oIndex].text = e.target.value;
-                                  setQuestions(newQs);
+                                style={{
+                                  background: "var(--background)",
+                                  border: "1px solid var(--border-light)",
+                                  color: "var(--text-primary)",
                                 }}
+                                value={opt.text}
+                                onChange={(e) => handleOptionTextChange(qIndex, oIndex, e.target.value)}
                               />
                             </div>
                           ))}
-                          <button type="button" onClick={() => handleAddOption(qIndex)} className="text-xs text-emerald-500 font-bold mt-2 hover:underline">
+                          <button
+                            type="button"
+                            onClick={() => handleAddOption(qIndex)}
+                            className="text-xs text-emerald-500 font-bold mt-2 hover:underline"
+                          >
                             + Add Option
                           </button>
                         </div>
@@ -349,11 +475,22 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "var(--border-light)" }}>
-                    <button type="button" onClick={handleAddQuestion} className="text-sm font-bold text-gray-400 hover:text-white transition-colors">
+                  <div
+                    className="flex items-center justify-between pt-4 border-t"
+                    style={{ borderColor: "var(--border-light)" }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleAddQuestion}
+                      className="text-sm font-bold text-gray-400 hover:text-white transition-colors"
+                    >
                       + ADD ANOTHER QUESTION
                     </button>
-                    <button type="submit" disabled={assessmentLoading} className="px-6 py-2.5 rounded-lg text-sm font-bold tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50">
+                    <button
+                      type="submit"
+                      disabled={assessmentLoading}
+                      className="px-6 py-2.5 rounded-lg text-sm font-bold tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50"
+                    >
                       {assessmentLoading ? "SAVING..." : "SAVE ASSESSMENT"}
                     </button>
                   </div>
@@ -362,20 +499,22 @@ export default function CourseManagementPage({ params }: { params: Promise<{ cou
             )}
 
             <div className="space-y-4">
-              {(!course.assessments || course.assessments.length === 0) ? (
-                <div className="p-8 text-center border border-dashed rounded-xl" style={{ borderColor: "var(--border-light)", color: "var(--text-secondary)" }}>
+              {!course.assessments || course.assessments.length === 0 ? (
+                <div
+                  className="p-8 text-center border border-dashed rounded-xl"
+                  style={{ borderColor: "var(--border-light)", color: "var(--text-secondary)" }}
+                >
                   <HelpCircle className="w-8 h-8 mx-auto mb-3 opacity-20" />
                   <p>No assessments have been added to this course yet.</p>
                 </div>
               ) : (
-                course.assessments.map((assessment: AssessmentData) => (
-                  <AssessmentCard key={assessment.id} assessment={assessment} onRefresh={fetchCourse} />
+                course.assessments.map((assessment: AssessmentData, index: number) => (
+                  <AssessmentCard key={assessment.id || index} assessment={assessment} onRefresh={fetchCourse} />
                 ))
               )}
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
