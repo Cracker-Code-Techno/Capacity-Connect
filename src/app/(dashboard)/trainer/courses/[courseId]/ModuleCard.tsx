@@ -1,14 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Edit, Trash2, AlertTriangle, Check, X, Loader2 } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, Check, X, Loader2, GripVertical } from "lucide-react";
+
+interface ModuleData {
+  id?: string;
+  title?: string;
+  content?: string;
+  order?: number;
+}
 
 export default function ModuleCard({
   mod,
   index,
   onRefresh,
 }: {
-  mod: any;
+  mod: ModuleData;
   index: number;
   onRefresh: () => void;
 }) {
@@ -17,8 +24,8 @@ export default function ModuleCard({
   const [deleteError, setDeleteError] = useState("");
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(mod.title || "");
-  const [editContent, setEditContent] = useState(mod.content || "");
+  const [editTitle, setEditTitle] = useState(mod.title ?? "");
+  const [editContent, setEditContent] = useState(mod.content ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
   const handleDelete = async () => {
@@ -75,6 +82,9 @@ export default function ModuleCard({
     >
       <div className="flex justify-between items-start gap-4 mb-3">
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white transition-colors">
+            <GripVertical className="w-5 h-5" />
+          </div>
           <div className="w-8 h-8 rounded-lg bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center font-mono text-xs font-bold text-[#a855f7] shrink-0">
             {mod.order || index + 1}
           </div>

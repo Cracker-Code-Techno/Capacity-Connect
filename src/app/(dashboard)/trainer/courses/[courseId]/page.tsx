@@ -4,12 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Reorder } from "framer-motion";
 import ModuleCard from "./ModuleCard";
 import AssessmentCard from "./AssessmentCard";
 
 interface ModuleData {
   id?: string;
-  [key: string]: unknown;
+  title?: string;
+  content?: string;
+  order?: number;
 }
 
 interface AssessmentData {
@@ -67,6 +70,7 @@ export default function CourseManagementPage({
 
 
   // Module State
+  const [orderedModules, setOrderedModules] = useState<ModuleData[]>([]);
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [moduleData, setModuleData] = useState({ title: "", content: "" });
   const [moduleLoading, setModuleLoading] = useState(false);
@@ -99,6 +103,10 @@ export default function CourseManagementPage({
           const found = data.course;
           if (found && !found.modules) found.modules = [];
           if (found && !found.assessments) found.assessments = [];
+          if (found && found.modules) {
+            found.modules.sort((a: ModuleData, b: ModuleData) => ((a.order as number) || 0) - ((b.order as number) || 0));
+            setOrderedModules(found.modules);
+          }
           setCourse(found);
         } else {
           console.error("Failed to fetch course details");
@@ -146,6 +154,19 @@ export default function CourseManagementPage({
       alert((err as Error).message || "Failed to add module");
     } finally {
       setModuleLoading(false);
+    }
+  };
+
+  const handleReorder = async (newOrder: ModuleData[]) => {
+    setOrderedModules(newOrder);
+    try {
+      await fetch(`/api/trainer/courses/${courseId}/modules/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleIds: newOrder.map((m) => m.id) }),
+      });
+    } catch (error) {
+      console.error("Failed to reorder", error);
     }
   };
 
@@ -360,8 +381,8 @@ export default function CourseManagementPage({
               </div>
             )}
 
-            <div className="space-y-4">
-              {!course.modules || course.modules.length === 0 ? (
+            <Reorder.Group axis="y" values={orderedModules} onReorder={handleReorder} className="space-y-4">
+              {!orderedModules || orderedModules.length === 0 ? (
                 <div
                   className="p-8 text-center border border-dashed rounded-xl"
                   style={{ borderColor: "var(--border-light)", color: "var(--text-secondary)" }}
@@ -370,11 +391,13 @@ export default function CourseManagementPage({
                   <p>No modules have been added to this course yet.</p>
                 </div>
               ) : (
-                course.modules.map((mod: ModuleData, index: number) => (
-                  <ModuleCard key={mod.id || index} mod={mod} index={index} onRefresh={fetchCourse} />
+                orderedModules.map((mod: ModuleData, index: number) => (
+                  <Reorder.Item key={mod.id as string} value={mod} className="cursor-grab active:cursor-grabbing">
+                    <ModuleCard mod={mod} index={index} onRefresh={fetchCourse} />
+                  </Reorder.Item>
                 ))
               )}
-            </div>
+            </Reorder.Group>
           </div>
         )}
 
