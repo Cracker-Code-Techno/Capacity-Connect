@@ -17,7 +17,7 @@ interface Experience {
   role: string;
   start: string;
   end: string;
-  description?: string;
+  description: string;
 }
 
 interface Certificate {
@@ -477,10 +477,10 @@ function RepeatList<T>({
   );
 }
 
-function updateItem<T>(setter: (v: T[]) => void, i: number, next: T) {
+function updateItem<T>(setter: React.Dispatch<React.SetStateAction<T[]>>, i: number, next: T) {
   setter((prev) => prev.map((it, idx) => (idx === i ? next : it)));
 }
-function removeItem<T>(setter: (v: T[]) => void, i: number) {
+function removeItem<T>(setter: React.Dispatch<React.SetStateAction<T[]>>, i: number) {
   setter((prev) => prev.filter((_, idx) => idx !== i));
 }
 

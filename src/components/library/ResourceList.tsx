@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, FileText, Video, FileQuestion } from "lucide-react";
+import { Trash2, FileText, Video, FileQuestion, type LucideIcon } from "lucide-react";
 import { useToast } from "@/components/global/useToast";
 
 export interface ResourceItem {
@@ -21,7 +21,7 @@ interface ResourceListProps {
   onDelete?: (id: string) => Promise<void> | void;
 }
 
-const ICONS: Record<string, any> = {
+const ICONS: Record<string, LucideIcon> = {
   lecture: Video,
   presentation: FileText,
   material: FileQuestion,
@@ -51,8 +51,9 @@ export function ResourceList({ items, canDelete, onDelete }: ResourceListProps) 
     try {
       await onDelete(id);
       showToast("Resource deleted");
-    } catch (err: any) {
-      showToast(err?.message || "Failed to delete", "error");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete";
+      showToast(message, "error");
     } finally {
       setDeleting(null);
     }

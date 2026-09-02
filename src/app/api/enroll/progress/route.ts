@@ -18,14 +18,14 @@ export async function PATCH(req: Request) {
     }
     const { moduleId, completed } = parsed.data;
 
-    const module = await prisma.courseModule.findUnique({
+    const mod = await prisma.courseModule.findUnique({
       where: { id: moduleId },
       include: { course: { select: { id: true, _count: { select: { modules: true } } } } },
     });
-    if (!module) return new NextResponse("Module not found", { status: 404 });
+    if (!mod) return new NextResponse("Module not found", { status: 404 });
 
     const enrollment = await prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId: user.id, courseId: module.courseId } },
+      where: { userId_courseId: { userId: user.id, courseId: mod.courseId } },
     });
     if (!enrollment) return new NextResponse("Not enrolled in this course", { status: 403 });
 
@@ -35,9 +35,9 @@ export async function PATCH(req: Request) {
       update: { completed, completedAt: completed ? new Date() : null },
     });
 
-    const totalModules = module.course._count.modules || 1;
+    const totalModules = mod.course._count.modules || 1;
     const completedCount = await prisma.moduleProgress.count({
-      where: { userId: user.id, module: { courseId: module.courseId }, completed: true },
+      where: { userId: user.id, module: { courseId: mod.courseId }, completed: true },
     });
     const progress = Math.min(100, Math.round((completedCount / totalModules) * 100));
 

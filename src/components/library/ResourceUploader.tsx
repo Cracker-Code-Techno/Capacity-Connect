@@ -13,7 +13,6 @@ interface ResourceUploaderProps {
 export function ResourceUploader({ prefix, onUploaded }: ResourceUploaderProps) {
   const { showToast } = useToast();
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSelect = async (file: File) => {
@@ -27,7 +26,6 @@ export function ResourceUploader({ prefix, onUploaded }: ResourceUploaderProps) 
     }
 
     setUploading(true);
-    setProgress(0);
     try {
       const form = new FormData();
       form.append("file", file);
@@ -39,12 +37,12 @@ export function ResourceUploader({ prefix, onUploaded }: ResourceUploaderProps) 
         throw new Error(msg);
       }
       const data = await res.json();
-      setProgress(100);
       onUploaded({ url: data.url, size: file.size, mimeType: file.type, fileName: file.name });
       showToast("File uploaded");
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
       console.error(err);
-      showToast(err.message || "Upload failed", "error");
+      showToast(message, "error");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

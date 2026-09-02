@@ -31,6 +31,7 @@ interface CourseData {
   description?: string;
   modules?: ModuleData[];
   assessments?: AssessmentData[];
+  subjects?: { id: string; name: string }[];
   _count?: {
     modules?: number;
     assessments?: number;

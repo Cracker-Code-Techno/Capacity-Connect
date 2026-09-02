@@ -27,6 +27,7 @@ model User {
   traineeProfile   TraineeProfile?
   trainerSubjects  TrainerSubject[]
   trainerResources TrainerResource[]
+  courses          Course[]
 
   @@index([role])
 }
@@ -37,6 +38,7 @@ model Course {
   description  String
   thumbnail    String?
   trainerId    String
+  trainer      User               @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   modules      CourseModule[]

@@ -18,7 +18,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const ip = req?.headers ? getClientIpFromHeaders(req.headers) : "127.0.0.1";
+        const ip = req?.headers ? getClientIpFromHeaders(req.headers as unknown as Headers) : "127.0.0.1";
         const rl = rateLimit(`login:${ip}:${credentials.email.toLowerCase()}`, { limit: 5, windowMs: 15 * 60 * 1000 });
         if (!rl.success) {
           throw new Error("Too many login attempts. Please try again later.");

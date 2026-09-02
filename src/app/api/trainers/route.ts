@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { RESOURCE_TYPES } from "@/lib/validators/resources";
 
 export async function GET(req: Request) {
@@ -7,7 +8,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const subject = url.searchParams.get("subject");
 
-    const where: any = { role: "TRAINER" };
+    const where: Prisma.UserWhereInput = { role: "TRAINER" };
     if (subject) {
       where.trainerSubjects = { some: { subject: { name: subject } } };
     }

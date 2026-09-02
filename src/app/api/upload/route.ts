@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getUserFromSession } from "@/lib/auth";
 import { uploadBlob } from "@/lib/blob";
 import { MAX_UPLOAD_BYTES, ALLOWED_MIME_PREFIXES } from "@/lib/validators/resources";
@@ -25,8 +24,9 @@ export async function POST(req: Request) {
 
     const result = await uploadBlob(file, prefix);
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Internal Error";
     console.error("[UPLOAD_POST]", error);
-    return new NextResponse(error?.message || "Internal Error", { status: 500 });
+    return new NextResponse(message, { status: 500 });
   }
 }
