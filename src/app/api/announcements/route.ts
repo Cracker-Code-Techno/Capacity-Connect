@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromSession } from "@/lib/auth";
-
-function sanitizeText(input: string): string {
-  return input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .trim();
-}
+import { sanitizeAnnouncementTitle, sanitizeAnnouncementContent } from "@/lib/sanitize";
 
 export async function GET() {
   try {
@@ -40,8 +35,8 @@ export async function POST(req: Request) {
       return new NextResponse("Missing or invalid title or content", { status: 400 });
     }
 
-    const cleanTitle = sanitizeText(title).substring(0, 200);
-    const cleanContent = sanitizeText(content).substring(0, 5000);
+    const cleanTitle = sanitizeAnnouncementTitle(title);
+    const cleanContent = sanitizeAnnouncementContent(content);
 
     if (!cleanTitle || !cleanContent) {
       return new NextResponse("Title or content cannot be empty", { status: 400 });

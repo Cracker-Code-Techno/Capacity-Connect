@@ -4,6 +4,7 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Navbar } from "@/components/global/Navbar";
 import { Footer } from "@/components/global/Footer";
+import { ToastProvider } from "@/components/global/useToast";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,11 +61,13 @@ export default function RootLayout({
       <body className="antialiased min-h-screen bg-white dark:bg-[#050810] text-gray-900 dark:text-[#e8ecf4] flex flex-col pt-16 selection:bg-purple-500/30 transition-colors duration-300">
         <SessionProvider>
           <ThemeProvider defaultTheme="dark">
-            <Navbar />
-            <main className="flex-grow flex flex-col">
-              {children}
-            </main>
-            <Footer />
+            <ToastProvider>
+              <Navbar />
+              <main className="flex-grow flex flex-col">
+                {children}
+              </main>
+              <Footer />
+            </ToastProvider>
           </ThemeProvider>
         </SessionProvider>
       </body>

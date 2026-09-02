@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Reorder } from "framer-motion";
 import ModuleCard from "./ModuleCard";
 import AssessmentCard from "./AssessmentCard";
+import { useToast } from "@/components/global/useToast";
 
 interface ModuleData {
   id?: string;
@@ -57,6 +58,7 @@ export default function CourseManagementPage({
   params: Promise<{ courseId: string }> | { courseId: string };
 }) {
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -151,7 +153,7 @@ export default function CourseManagementPage({
       setShowModuleForm(false);
       fetchCourse();
     } catch (err: unknown) {
-      alert((err as Error).message || "Failed to add module");
+      showToast((err as Error).message || "Failed to add module", "error");
     } finally {
       setModuleLoading(false);
     }
@@ -228,7 +230,7 @@ export default function CourseManagementPage({
       setShowAssessmentForm(false);
       fetchCourse();
     } catch (err: unknown) {
-      alert((err as Error).message || "Failed to save assessment");
+      showToast((err as Error).message || "Failed to save assessment", "error");
     } finally {
       setAssessmentLoading(false);
     }

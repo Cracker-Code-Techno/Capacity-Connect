@@ -5,10 +5,12 @@ import { BookOpen, AlertCircle, Search, User, Star, Loader2 } from "lucide-react
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/global/useToast";
 
 export default function CoursesPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { showToast } = useToast();
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function CoursesPage() {
 
       router.push("/trainee");
     } catch (err: any) {
-      alert(err.message || "Failed to enroll");
+      showToast(err.message || "Failed to enroll", "error");
       setEnrolling(null);
     }
   };

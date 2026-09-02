@@ -103,8 +103,17 @@ export async function PUT(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    // Ensure we aren't demoting the last admin or something similar if needed
-    // But for this prototype, we'll just allow any role change
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } });
+    if (!target) {
+      return new NextResponse("User not found", { status: 404 });
+    }
+
+    if (target.role === "ADMIN" && role !== "ADMIN") {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (adminCount <= 1) {
+        return new NextResponse("Cannot demote the last admin user", { status: 400 });
+      }
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

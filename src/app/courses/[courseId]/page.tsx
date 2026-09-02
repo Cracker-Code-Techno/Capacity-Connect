@@ -2,16 +2,20 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BookOpen, CheckCircle, PlayCircle, Lock, HelpCircle } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle, PlayCircle, Lock, HelpCircle, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useToast } from "@/components/global/useToast";
+import { SubjectChips } from "@/components/subjects/SubjectChips";
 
 export default function CoursePlayerPage({ params }: { params: Promise<{ courseId: string }> | { courseId: string } }) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { showToast } = useToast();
   const [courseId, setCourseId] = useState<string>("");
   const [course, setCourse] = useState<any>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [userProgress, setUserProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
@@ -42,6 +46,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
         const data = await res.json();
         setCourse(data.course);
         setIsEnrolled(data.isEnrolled);
+        setUserProgress(data.userProgress || null);
         if (data.course.modules && data.course.modules.length > 0) {
           setActiveModuleId(data.course.modules[0].id);
         }
@@ -69,10 +74,10 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
         body: JSON.stringify({ courseId }),
       });
       if (res.ok) {
-        alert("Successfully enrolled!");
+        showToast("Successfully enrolled!");
         fetchCourseDetails();
       } else {
-        alert("Failed to enroll.");
+        showToast("Failed to enroll.", "error");
       }
     } catch (err) {
       console.error(err);
@@ -105,13 +110,18 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
               <Lock className="w-10 h-10 text-[#a855f7]" />
             </div>
             <h1 className="text-4xl font-extrabold mb-4" style={{ color: "var(--text-primary)" }}>{course.title}</h1>
-            <p className="text-lg mb-8" style={{ color: "var(--text-secondary)" }}>{course.description}</p>
-            <button 
-              onClick={handleEnroll}
-              className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold tracking-widest text-lg shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
-            >
-              ENROLL NOW TO UNLOCK
-            </button>
+              <p className="text-lg mb-6" style={{ color: "var(--text-secondary)" }}>{course.description}</p>
+              {course.subjects && course.subjects.length > 0 && (
+                <div className="mb-6">
+                  <SubjectChips subjects={course.subjects} size="md" />
+                </div>
+              )}
+              <button
+                onClick={handleEnroll}
+                className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold tracking-widest text-lg shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
+              >
+                ENROLL NOW TO UNLOCK
+              </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -119,6 +129,25 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
             <div className="lg:col-span-1 space-y-6">
               <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)]">
                 <h2 className="font-bold text-lg mb-4" style={{ color: "var(--text-primary)" }}>Course Content</h2>
+                {course.subjects && course.subjects.length > 0 && (
+                  <div className="mb-4">
+                    <SubjectChips subjects={course.subjects} />
+                  </div>
+                )}
+                {userProgress && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                      <span>PROGRESS</span>
+                      <span>{userProgress.progress}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all"
+                        style={{ width: `${userProgress.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {course.modules?.map((mod: any, index: number) => (
                     <button
@@ -141,13 +170,21 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
                         <Link
                           key={assessment.id}
                           href={`/courses/${courseId}/assessments/${assessment.id}`}
-                          className="w-full p-3 rounded-lg flex items-center justify-between border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors group"
+                          className="w-full p-3 rounded-lg flex flex-col gap-1 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors group"
                         >
-                          <div className="flex items-center gap-3 text-emerald-400">
-                            <HelpCircle className="w-4 h-4 shrink-0" />
-                            <span className="text-sm font-semibold truncate">{assessment.title}</span>
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3 text-emerald-400">
+                              <HelpCircle className="w-4 h-4 shrink-0" />
+                              <span className="text-sm font-semibold truncate">{assessment.title}</span>
+                            </div>
+                            <ArrowLeft className="w-4 h-4 text-emerald-500 rotate-180 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
-                          <ArrowLeft className="w-4 h-4 text-emerald-500 rotate-180 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          {assessment.dueDate && (
+                            <div className="flex items-center gap-1 text-[10px] text-amber-400 ml-7">
+                              <Calendar className="w-3 h-3" />
+                              DUE {new Date(assessment.dueDate).toLocaleDateString()}
+                            </div>
+                          )}
                         </Link>
                       ))}
                     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Edit, Trash2, AlertTriangle, Check, X, Loader2, GripVertical } from "lucide-react";
+import { useToast } from "@/components/global/useToast";
 
 interface ModuleData {
   id?: string;
@@ -19,6 +20,7 @@ export default function ModuleCard({
   index: number;
   onRefresh: () => void;
 }) {
+  const { showToast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -65,11 +67,11 @@ export default function ModuleCard({
         setIsEditing(false);
         onRefresh();
       } else {
-        alert("Failed to update lecture.");
+        showToast("Failed to update lecture.", "error");
       }
     } catch (error) {
       console.error(error);
-      alert("Error updating lecture.");
+      showToast("Error updating lecture.", "error");
     } finally {
       setIsSaving(false);
     }

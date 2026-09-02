@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Award } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useToast } from "@/components/global/useToast";
 
 export default function AssessmentPlayerPage({ params }: { params: Promise<{ courseId: string; assessmentId: string }> | { courseId: string; assessmentId: string } }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { showToast } = useToast();
   
   const [courseId, setCourseId] = useState<string>("");
   const [assessmentId, setAssessmentId] = useState<string>("");
@@ -63,7 +65,7 @@ export default function AssessmentPlayerPage({ params }: { params: Promise<{ cou
 
   const handleSubmit = async () => {
     if (Object.keys(answers).length < assessment.questions.length) {
-      alert("Please answer all questions before submitting.");
+      showToast("Please answer all questions before submitting.", "error");
       return;
     }
     
@@ -78,7 +80,7 @@ export default function AssessmentPlayerPage({ params }: { params: Promise<{ cou
       if (res.ok) {
         setResult(await res.json());
       } else {
-        alert("Failed to submit assessment.");
+        showToast("Failed to submit assessment.", "error");
       }
     } catch (err) {
       console.error(err);

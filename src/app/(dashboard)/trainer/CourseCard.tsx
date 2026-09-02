@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/global/useToast";
 
 export default function CourseCard({ course }: { course: any }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -25,11 +27,11 @@ export default function CourseCard({ course }: { course: any }) {
       if (res.ok) {
         router.refresh();
       } else {
-        alert("Failed to delete course.");
+        showToast("Failed to delete course.", "error");
       }
     } catch (error) {
       console.error(error);
-      alert("Error deleting course.");
+      showToast("Error deleting course.", "error");
     } finally {
       setIsDeleting(false);
       setShowConfirm(false);
@@ -50,11 +52,11 @@ export default function CourseCard({ course }: { course: any }) {
         setIsEditing(false);
         router.refresh();
       } else {
-        alert("Failed to update course.");
+        showToast("Failed to update course.", "error");
       }
     } catch (error) {
       console.error(error);
-      alert("Error updating course.");
+      showToast("Error updating course.", "error");
     } finally {
       setIsSaving(false);
     }

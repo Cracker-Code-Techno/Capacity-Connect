@@ -54,6 +54,9 @@ export function Navbar() {
                   <User className="w-4 h-4" />
                   Dashboard
                 </Link>
+                <Link href="/profile" className="text-sm font-medium text-[#8b9ab8] hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md transition-colors">
+                  Profile
+                </Link>
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
                   className="flex items-center gap-2 text-sm font-medium text-red-400 hover:text-red-300 transition-colors"
@@ -104,6 +107,7 @@ export function Navbar() {
               {session ? (
                 <>
                   <Link href={getDashboardLink()} onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-[#e8ecf4] hover:text-[#a855f7] hover:bg-[rgba(255,255,255,0.05)]">Dashboard</Link>
+                  <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-[#8b9ab8] hover:text-white hover:bg-[rgba(255,255,255,0.05)]">Profile</Link>
                   <button onClick={() => { signOut({ callbackUrl: "/" }); setIsMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-red-500/10">Logout</button>
                 </>
               ) : (

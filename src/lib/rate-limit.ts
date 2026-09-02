@@ -81,3 +81,19 @@ export function getClientIp(req: Request): string {
   }
   return "127.0.0.1";
 }
+
+export function getClientIpFromHeaders(headers: Headers | { get(name: string): string | null | undefined }): string {
+  const get = (name: string) => {
+    if (typeof (headers as Headers).get === "function") return (headers as Headers).get(name);
+    return (headers as { get(name: string): string | null | undefined }).get(name);
+  };
+  const forwarded = get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0].trim();
+  }
+  const realIp = get("x-real-ip");
+  if (realIp) {
+    return realIp.trim();
+  }
+  return "127.0.0.1";
+}

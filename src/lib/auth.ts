@@ -2,6 +2,7 @@ import { NextAuthOptions, Session } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { getServerSession } from "next-auth/next";
 import { prisma } from "./prisma";
+import { rateLimit, getClientIpFromHeaders } from "./rate-limit";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
@@ -12,9 +13,15 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials");
+        }
+
+        const ip = req?.headers ? getClientIpFromHeaders(req.headers) : "127.0.0.1";
+        const rl = rateLimit(`login:${ip}:${credentials.email.toLowerCase()}`, { limit: 5, windowMs: 15 * 60 * 1000 });
+        if (!rl.success) {
+          throw new Error("Too many login attempts. Please try again later.");
         }
 
         const user = await prisma.user.findUnique({
