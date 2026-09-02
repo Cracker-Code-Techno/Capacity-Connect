@@ -1,14 +1,10 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST ?? "smtp.gmail.com",
-  port: Number(process.env.EMAIL_PORT ?? 587),
-  secure: process.env.EMAIL_SECURE === "true",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY is not set");
+  return new Resend(key);
+}
 
 const FROM = process.env.EMAIL_FROM ?? "Capacity Connect <noreply@capacityconnect.app>";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -19,7 +15,7 @@ export async function sendPasswordResetEmail(
 ): Promise<void> {
   const resetUrl = `${BASE_URL}/reset-password?token=${token}`;
 
-  await transporter.sendMail({
+  await getResend().emails.send({
     from: FROM,
     to: email,
     subject: "Reset your Capacity Connect password",
@@ -50,7 +46,7 @@ export async function sendVerificationEmail(
 ): Promise<void> {
   const verifyUrl = `${BASE_URL}/verify-email?token=${token}`;
 
-  await transporter.sendMail({
+  await getResend().emails.send({
     from: FROM,
     to: email,
     subject: "Verify your Capacity Connect email",

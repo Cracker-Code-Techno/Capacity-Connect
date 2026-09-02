@@ -2,7 +2,7 @@ import { NextAuthOptions, Session } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { getServerSession } from "next-auth/next";
 import { prisma } from "./prisma";
-import { rateLimit, getClientIpFromHeaders } from "./rate-limit";
+import { rateLimit } from "./rate-limit";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
@@ -18,7 +18,12 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const ip = req?.headers ? getClientIpFromHeaders(req.headers as unknown as Headers) : "127.0.0.1";
+        const rawHeaders = req?.headers as Record<string, string | string[] | undefined> | undefined;
+        const forwardedFor = rawHeaders?.["x-forwarded-for"];
+        const ip = typeof forwardedFor === "string"
+          ? forwardedFor.split(",")[0].trim()
+          : (rawHeaders?.["x-real-ip"] as string | undefined) ?? "127.0.0.1";
+
         const rl = rateLimit(`login:${ip}:${credentials.email.toLowerCase()}`, { limit: 5, windowMs: 15 * 60 * 1000 });
         if (!rl.success) {
           throw new Error("Too many login attempts. Please try again later.");
