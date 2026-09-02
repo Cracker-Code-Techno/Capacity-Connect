@@ -4,20 +4,30 @@ Frontend:
 - Next.js 16 (App Router)
 - React 19
 - TypeScript
-- Tailwind CSS v4 (Styling)
-- Framer Motion (Animations & Micro-interactions)
+- Tailwind CSS v4 (Styling, no config file — theme tokens in globals.css)
+- Framer Motion (Animations, micro-interactions, Reorder for drag)
 - Lucide React (Icons)
-- Next Themes (Dark Mode support)
+- Next Themes (Dark / light mode toggle)
 
 Backend / API:
-- Next.js API Routes (Serverless handlers)
-- Prisma ORM (Database access)
-- PostgreSQL (Database)
+- Next.js API Routes (Serverless handlers) + middleware (src/proxy.ts)
+- Prisma ORM 5 (Database access)
+- PostgreSQL via Supabase (Pooled PgBouncer URL + DIRECT_URL for migrations)
+- Zod (Server-side request validation)
+- @vercel/blob (File / media storage with local public/uploads/ dev fallback)
+- Nodemailer (Transactional email — verification + password reset)
 
 Authentication & Security:
-- NextAuth.js (Session management & RBAC - Role Based Access Control)
+- NextAuth.js (Credentials provider, JWT sessions, role-based middleware)
 - bcryptjs (Password hashing)
+- Custom in-memory rate limiter (per-key, with Origin / CSRF check in proxy.ts)
+
+Real-time / Interactivity:
+- @dnd-kit/* (Drag-and-drop primitives, available; Reorder via framer-motion is in use)
 
 Development & Tooling:
 - ESLint (Code linting)
+- Husky + lint-staged (Pre-commit lint, pre-push typecheck)
+- Vitest + Playwright (Test runners, config in place)
 - npm (Package management)
+- TypeScript `tsc --noEmit` (Typecheck script)

@@ -235,7 +235,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const refreshHighlights = async () => {
+    const refreshHighlights = async () => {
     const r = await fetch("/api/homepage-highlights");
     if (r.ok) setHighlights(await r.json());
   };
@@ -274,6 +274,24 @@ export default function AdminDashboard() {
       showToast("Highlight removed");
     } else {
       showToast("Failed to delete highlight", "error");
+    }
+  };
+
+  // Competency Match State
+  const [compSubject, setCompSubject] = useState("");
+  const [compResults, setCompResults] = useState<any[]>([]);
+  const [compLoading, setCompLoading] = useState(false);
+
+  const runMatch = async () => {
+    if (!compSubject) return;
+    setCompLoading(true);
+    try {
+      const res = await fetch(`/api/competency/match?subjectId=${compSubject}`);
+      if (res.ok) setCompResults(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCompLoading(false);
     }
   };
 
@@ -670,6 +688,52 @@ export default function AdminDashboard() {
                 </div>
               ))}
           </div>
+        </div>
+
+        {/* Competency Match */}
+        <div className="glass-panel rounded-2xl border border-[rgba(255,255,255,0.05)] overflow-hidden mb-10">
+          <div className="p-6 border-b" style={{ borderColor: "var(--border-light)" }}>
+            <h2 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Competency Match</h2>
+            <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+              Rank trainers by competency rating for any subject.
+            </p>
+          </div>
+          <div className="p-6 flex flex-col sm:flex-row gap-3 border-b" style={{ borderColor: "var(--border-light)" }}>
+            <select
+              value={compSubject}
+              onChange={(e) => setCompSubject(e.target.value)}
+              className="flex-grow px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+            >
+              <option value="">Select a subject…</option>
+              {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <button
+              onClick={runMatch}
+              disabled={!compSubject || compLoading}
+              className="px-4 py-2 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white inline-flex items-center gap-1 disabled:opacity-50"
+            >
+              {compLoading ? "RANKING…" : "RANK TRAINERS"}
+            </button>
+          </div>
+          {compResults.length > 0 && (
+            <div className="p-6 space-y-2">
+              {compResults.map((m, i) => (
+                <div key={m.trainerId} className="flex items-center gap-3 p-3 rounded-lg border border-[rgba(255,255,255,0.05)]">
+                  <span className="font-mono text-sm w-6 text-center" style={{ color: "var(--text-muted)" }}>#{i + 1}</span>
+                  <div className="flex-grow">
+                    <p className="font-bold" style={{ color: "var(--text-primary)" }}>{m.trainer.name}</p>
+                    {m.trainer.trainerProfile?.headline && (
+                      <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{m.trainer.trainerProfile.headline}</p>
+                    )}
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    ★ {m.rating}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

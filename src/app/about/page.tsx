@@ -1,5 +1,11 @@
 import { Info } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About Us",
+  description: "Learn more about Capacity Connect and our mission.",
+};
 
 export default function AboutPlaceholder() {
   return (

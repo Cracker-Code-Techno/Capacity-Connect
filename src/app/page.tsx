@@ -11,14 +11,19 @@ export default function Home() {
   const { data: session } = useSession();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [highlights, setHighlights] = useState<any[]>([]);
+  const [highlightItems, setHighlightItems] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [annRes, courseRes] = await Promise.all([
+        const [annRes, courseRes, achRes, hlRes] = await Promise.all([
           fetch("/api/announcements"),
-          fetch("/api/courses")
+          fetch("/api/courses"),
+          fetch("/api/achievements"),
+          fetch("/api/homepage-highlights"),
         ]);
         if (annRes.ok) {
           const data = await annRes.json();
@@ -27,6 +32,33 @@ export default function Home() {
         if (courseRes.ok) {
           const data = await courseRes.json();
           setCourses(data.slice(0, 3));
+        }
+        if (achRes.ok) setAchievements(await achRes.json());
+        if (hlRes.ok) {
+          const hs = await hlRes.json();
+          setHighlights(hs);
+          // Resolve refs
+          const items: Record<string, any> = {};
+          for (const h of hs) {
+            try {
+              if (h.kind === "course") {
+                const r = await fetch(`/api/courses/${h.refId}`);
+                if (r.ok) items[h.refId] = await r.json();
+              } else if (h.kind === "announcement") {
+                const r = await fetch("/api/announcements");
+                if (r.ok) {
+                  const all = await r.json();
+                  items[h.refId] = all.find((a: any) => a.id === h.refId);
+                }
+              } else if (h.kind === "achievement") {
+                const all = await achRes.clone().json();
+                items[h.refId] = all.find((a: any) => a.id === h.refId);
+              }
+            } catch {
+              // ignore
+            }
+          }
+          setHighlightItems(items);
         }
       } catch (err) {
         console.error(err);
@@ -243,6 +275,80 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      {/* ── Achievements + Highlights Section ───────────────────────────── */}
+      {(achievements.length > 0 || highlights.length > 0) && (
+        <section
+          className="py-20 relative z-10 border-t"
+          style={{ borderColor: "var(--border-light)", background: "var(--panel)" }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {highlights.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-extrabold tracking-tight mb-6" style={{ color: "var(--text-primary)" }}>
+                  Newly Added Content
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {highlights.slice(0, 6).map((h) => {
+                    const ref = highlightItems[h.refId];
+                    if (!ref) return null;
+                    if (h.kind === "course") {
+                      return (
+                        <Link key={h.id} href={`/courses/${h.refId}`} className="glass-card p-5 rounded-2xl border border-[#a855f7]/20 hover:border-[#a855f7]/50 block transition-colors">
+                          <p className="text-[10px] tracking-widest font-mono text-[#a855f7] mb-2">COURSE</p>
+                          <h3 className="font-bold mb-1 line-clamp-2" style={{ color: "var(--text-primary)" }}>{ref.course?.title || ref.title}</h3>
+                          <p className="text-xs line-clamp-2" style={{ color: "var(--text-secondary)" }}>{ref.course?.description || ref.description}</p>
+                        </Link>
+                      );
+                    }
+                    if (h.kind === "announcement") {
+                      return (
+                        <div key={h.id} className="glass-card p-5 rounded-2xl border border-blue-500/20">
+                          <p className="text-[10px] tracking-widest font-mono text-blue-400 mb-2">ANNOUNCEMENT</p>
+                          <h3 className="font-bold mb-1 line-clamp-2" style={{ color: "var(--text-primary)" }}>{ref.title}</h3>
+                          <p className="text-xs line-clamp-3" style={{ color: "var(--text-secondary)" }}>{ref.content}</p>
+                        </div>
+                      );
+                    }
+                    if (h.kind === "achievement") {
+                      return (
+                        <div key={h.id} className="glass-card p-5 rounded-2xl border border-amber-500/20">
+                          <p className="text-[10px] tracking-widest font-mono text-amber-400 mb-2">ACHIEVEMENT</p>
+                          <h3 className="font-bold mb-1 line-clamp-2" style={{ color: "var(--text-primary)" }}>{ref.title}</h3>
+                          <p className="text-xs line-clamp-3" style={{ color: "var(--text-secondary)" }}>{ref.description}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {achievements.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-extrabold tracking-tight mb-6" style={{ color: "var(--text-primary)" }}>
+                  Achievements
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {achievements.slice(0, 6).map((a) => (
+                    <div key={a.id} className="glass-card p-5 rounded-2xl border border-amber-500/20 flex gap-3">
+                      {a.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                      )}
+                      <div>
+                        <h3 className="font-bold mb-1" style={{ color: "var(--text-primary)" }}>{a.title}</h3>
+                        <p className="text-xs line-clamp-3" style={{ color: "var(--text-secondary)" }}>{a.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── Features Section ──────────────────────────────────────────── */}
       <section

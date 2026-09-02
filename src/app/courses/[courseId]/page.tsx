@@ -2,11 +2,15 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BookOpen, CheckCircle, PlayCircle, Lock, HelpCircle, Calendar } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle, PlayCircle, Lock, HelpCircle, Calendar, FileText, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/components/global/useToast";
 import { SubjectChips } from "@/components/subjects/SubjectChips";
+import { FeedbackForm } from "@/components/courses/FeedbackForm";
+import { FeedbackList } from "@/components/courses/FeedbackList";
+import { RatingStars } from "@/components/courses/RatingStars";
+import { ResourceList, ResourceItem } from "@/components/library/ResourceList";
 
 export default function CoursePlayerPage({ params }: { params: Promise<{ courseId: string }> | { courseId: string } }) {
   const { data: session } = useSession();
@@ -20,6 +24,8 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
   
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [moduleProgressMap, setModuleProgressMap] = useState<Record<string, boolean>>({});
+  const [playerTab, setPlayerTab] = useState<"content" | "resources" | "reviews">("content");
+  const [refreshReviews, setRefreshReviews] = useState(0);
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -239,39 +245,108 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
 
             {/* Main Content Area */}
             <div className="lg:col-span-3">
-              <div className="glass-panel p-8 md:p-12 rounded-2xl border border-[rgba(255,255,255,0.05)] min-h-[600px]">
-                {activeModule ? (
-                  <>
-                    <div className="flex items-start justify-between gap-4 mb-8 pb-4 border-b" style={{ borderColor: "var(--border-light)" }}>
-                      <h1 className="text-3xl font-extrabold" style={{ color: "var(--text-primary)" }}>{activeModule.title}</h1>
-                      <button
-                        onClick={() => toggleModuleComplete(activeModule.id, !moduleProgressMap[activeModule.id])}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${
-                          moduleProgressMap[activeModule.id]
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                            : "bg-purple-600 hover:bg-purple-700 text-white"
-                        }`}
-                      >
-                        {moduleProgressMap[activeModule.id] ? (
-                          <><CheckCircle className="w-4 h-4" /> COMPLETED</>
-                        ) : (
-                          "MARK COMPLETE"
-                        )}
-                      </button>
-                    </div>
-                    <div className="space-y-4" style={{ color: "var(--text-secondary)" }}>
-                      {activeModule.content.split('\n').map((paragraph: string, i: number) => (
-                        <p key={i} className="leading-relaxed">{paragraph}</p>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center" style={{ color: "var(--text-muted)" }}>
-                    <BookOpen className="w-12 h-12 mb-4 opacity-40 text-[#a855f7]" />
-                    <p>Select a module to start learning.</p>
-                  </div>
-                )}
+              <div className="flex border-b mb-6 gap-6" style={{ borderColor: "var(--border-light)" }}>
+                <button
+                  onClick={() => setPlayerTab("content")}
+                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative ${
+                    playerTab === "content" ? "text-[#a855f7]" : "text-gray-500"
+                  }`}
+                >
+                  Content
+                  {playerTab === "content" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
+                </button>
+                <button
+                  onClick={() => setPlayerTab("resources")}
+                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative ${
+                    playerTab === "resources" ? "text-[#a855f7]" : "text-gray-500"
+                  }`}
+                >
+                  Resources ({course.resources?.length || 0})
+                  {playerTab === "resources" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
+                </button>
+                <button
+                  onClick={() => setPlayerTab("reviews")}
+                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative flex items-center gap-1 ${
+                    playerTab === "reviews" ? "text-[#a855f7]" : "text-gray-500"
+                  }`}
+                >
+                  Reviews ({course.feedbackCount || 0})
+                  {playerTab === "reviews" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
+                </button>
               </div>
+
+              {playerTab === "content" && (
+                <div className="glass-panel p-8 md:p-12 rounded-2xl border border-[rgba(255,255,255,0.05)] min-h-[600px]">
+                  {activeModule ? (
+                    <>
+                      <div className="flex items-start justify-between gap-4 mb-8 pb-4 border-b" style={{ borderColor: "var(--border-light)" }}>
+                        <h1 className="text-3xl font-extrabold" style={{ color: "var(--text-primary)" }}>{activeModule.title}</h1>
+                        <button
+                          onClick={() => toggleModuleComplete(activeModule.id, !moduleProgressMap[activeModule.id])}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${
+                            moduleProgressMap[activeModule.id]
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                              : "bg-purple-600 hover:bg-purple-700 text-white"
+                          }`}
+                        >
+                          {moduleProgressMap[activeModule.id] ? (
+                            <><CheckCircle className="w-4 h-4" /> COMPLETED</>
+                          ) : (
+                            "MARK COMPLETE"
+                          )}
+                        </button>
+                      </div>
+                      <div className="space-y-4" style={{ color: "var(--text-secondary)" }}>
+                        {activeModule.content.split('\n').map((paragraph: string, i: number) => (
+                          <p key={i} className="leading-relaxed">{paragraph}</p>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center" style={{ color: "var(--text-muted)" }}>
+                      <BookOpen className="w-12 h-12 mb-4 opacity-40 text-[#a855f7]" />
+                      <p>Select a module to start learning.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {playerTab === "resources" && (
+                <div className="glass-panel p-6 md:p-8 rounded-2xl border border-[rgba(255,255,255,0.05)]">
+                  {course.resources && course.resources.length > 0 ? (
+                    <ResourceList items={course.resources as unknown as ResourceItem[]} canDelete={false} />
+                  ) : (
+                    <p className="text-sm text-center py-6" style={{ color: "var(--text-muted)" }}>
+                      No resources attached yet.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {playerTab === "reviews" && (
+                <div className="space-y-6">
+                  <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)] flex items-center gap-4">
+                    <div>
+                      <p className="text-3xl font-extrabold" style={{ color: "var(--text-primary)" }}>
+                        {course.feedbackAvg ? course.feedbackAvg.toFixed(1) : "—"}
+                      </p>
+                      <RatingStars value={Math.round(course.feedbackAvg || 0)} readOnly size="sm" />
+                      <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                        {course.feedbackCount || 0} reviews
+                      </p>
+                    </div>
+                  </div>
+                  {isEnrolled && (session?.user as { role?: string })?.role === "TRAINEE" && (
+                    <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)]">
+                      <h3 className="text-lg font-bold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                        <MessageSquare className="w-4 h-4 text-[#a855f7]" /> Leave a review
+                      </h3>
+                      <FeedbackForm courseId={courseId} onSubmitted={() => { fetchCourseDetails(); setRefreshReviews((n) => n + 1); }} />
+                    </div>
+                  )}
+                  <FeedbackList key={refreshReviews} courseId={courseId} />
+                </div>
+              )}
             </div>
           </div>
         )}

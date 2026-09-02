@@ -1,5 +1,11 @@
 import { HelpCircle } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "FAQ",
+  description: "Frequently asked questions about Capacity Connect.",
+};
 
 export default function FAQPlaceholder() {
   return (

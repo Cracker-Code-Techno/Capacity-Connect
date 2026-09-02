@@ -1,5 +1,11 @@
 import { Mail } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Get in touch with the Capacity Connect team.",
+};
 
 export default function ContactPlaceholder() {
   return (

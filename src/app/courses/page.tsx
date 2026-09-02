@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, AlertCircle, Search, User, Star, Loader2 } from "lucide-react";
+import { BookOpen, AlertCircle, Search, User, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
