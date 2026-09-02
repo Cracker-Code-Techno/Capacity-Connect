@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle, X, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Reorder } from "framer-motion";
 import ModuleCard from "./ModuleCard";
 import AssessmentCard from "./AssessmentCard";
 import { useToast } from "@/components/global/useToast";
+import { SubjectPicker } from "@/components/subjects/SubjectPicker";
+import { ResourceUploader } from "@/components/library/ResourceUploader";
+import { ResourceList, ResourceItem } from "@/components/library/ResourceList";
+import { RESOURCE_TYPES } from "@/lib/validators/resources";
 
 interface ModuleData {
   id?: string;
@@ -68,7 +72,7 @@ export default function CourseManagementPage({
 
   // Tabs
   const initialTab = searchParams?.get("tab") === "assessments" ? "assessments" : "modules";
-  const [activeTab, setActiveTab] = useState<"modules" | "assessments">(initialTab);
+  const [activeTab, setActiveTab] = useState<"modules" | "assessments" | "subjects" | "resources">(initialTab);
 
 
   // Module State
@@ -80,6 +84,9 @@ export default function CourseManagementPage({
   // Assessment State
   const [showAssessmentForm, setShowAssessmentForm] = useState(false);
   const [assessmentTitle, setAssessmentTitle] = useState("");
+  const [assessmentDueDate, setAssessmentDueDate] = useState("");
+  const [assessmentMaxAttempts, setAssessmentMaxAttempts] = useState("3");
+  const [assessmentPassingScore, setAssessmentPassingScore] = useState("70");
   const [questions, setQuestions] = useState<Question[]>([emptyQuestion()]);
   const [assessmentLoading, setAssessmentLoading] = useState(false);
 
@@ -221,11 +228,17 @@ export default function CourseManagementPage({
         body: JSON.stringify({
           courseId,
           title: assessmentTitle,
+          dueDate: assessmentDueDate ? new Date(assessmentDueDate).toISOString() : undefined,
+          maxAttempts: Number(assessmentMaxAttempts) || 3,
+          passingScore: Number(assessmentPassingScore) || 70,
           questions,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
       setAssessmentTitle("");
+      setAssessmentDueDate("");
+      setAssessmentMaxAttempts("3");
+      setAssessmentPassingScore("70");
       setQuestions([emptyQuestion()]);
       setShowAssessmentForm(false);
       fetchCourse();
@@ -304,6 +317,28 @@ export default function CourseManagementPage({
           >
             Assessments
             {activeTab === "assessments" && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("subjects")}
+            className={`pb-4 text-sm font-bold tracking-widest uppercase transition-colors relative ${
+              activeTab === "subjects" ? "text-[#a855f7]" : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            Subjects
+            {activeTab === "subjects" && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("resources")}
+            className={`pb-4 text-sm font-bold tracking-widest uppercase transition-colors relative ${
+              activeTab === "resources" ? "text-[#a855f7]" : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            Resources
+            {activeTab === "resources" && (
               <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />
             )}
           </button>
@@ -446,6 +481,49 @@ export default function CourseManagementPage({
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "var(--text-muted)" }}>
+                        Due Date (optional)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={assessmentDueDate}
+                        onChange={(e) => setAssessmentDueDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "var(--text-muted)" }}>
+                        Max Attempts
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={assessmentMaxAttempts}
+                        onChange={(e) => setAssessmentMaxAttempts(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "var(--text-muted)" }}>
+                        Passing Score (%)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={assessmentPassingScore}
+                        onChange={(e) => setAssessmentPassingScore(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-6">
                     {questions.map((q, qIndex) => (
                       <div key={qIndex} className="p-4 rounded-xl border border-[rgba(255,255,255,0.05)] bg-black/20">
@@ -544,6 +622,157 @@ export default function CourseManagementPage({
               )}
             </div>
           </div>
+        )}
+
+        {/* SUBJECTS TAB */}
+        {activeTab === "subjects" && (
+          <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)]">
+            <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>Course Subjects</h2>
+            <SubjectPicker
+              courseId={courseId}
+              initial={course.subjects || []}
+              canEdit={true}
+            />
+          </div>
+        )}
+
+        {/* RESOURCES TAB */}
+        {activeTab === "resources" && <CourseResourcesSection courseId={courseId} />}
+      </div>
+    </div>
+  );
+}
+
+function CourseResourcesSection({ courseId }: { courseId: string }) {
+  const { showToast } = useToast();
+  const [items, setItems] = useState<ResourceItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState<string>("lecture");
+  const [pending, setPending] = useState<{ url: string; size: number; mimeType: string; fileName: string } | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/courses/${courseId}/resources`);
+      if (res.ok) setItems(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [courseId]);
+
+  const save = async () => {
+    if (!pending || !title.trim()) {
+      showToast("Upload a file and enter a title", "error");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/courses/${courseId}/resources`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          type,
+          fileUrl: pending.url,
+          fileSize: pending.size,
+          mimeType: pending.mimeType,
+        }),
+      });
+      if (res.ok) {
+        showToast("Resource attached");
+        setTitle("");
+        setDescription("");
+        setPending(null);
+        await load();
+      } else {
+        showToast("Failed to save", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Network error", "error");
+    }
+  };
+
+  const remove = async (id: string) => {
+    const res = await fetch(`/api/courses/${courseId}/resources?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } else {
+      showToast("Failed to delete", "error");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="glass-panel p-6 rounded-2xl border border-[#a855f7]/20">
+        <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text-primary)" }}>
+          Attach a new resource
+        </h2>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+            >
+              {RESOURCE_TYPES.map((t) => (
+                <option key={t} value={t}>{t[0].toUpperCase() + t.slice(1)}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Resource title"
+              className="px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+            />
+          </div>
+          <textarea
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description (optional)"
+            className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-y"
+            style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+          />
+          <div className="flex items-center gap-3">
+            <ResourceUploader prefix={`course/${courseId}`} onUploaded={(r) => setPending(r)} />
+            {pending && (
+              <div className="flex items-center gap-2 text-sm flex-grow" style={{ color: "var(--text-secondary)" }}>
+                <span className="truncate">{pending.fileName}</span>
+                <button onClick={() => setPending(null)} className="text-rose-500 hover:text-rose-400" aria-label="Discard">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            <button
+              onClick={save}
+              disabled={!pending || !title.trim()}
+              className="px-4 py-2.5 rounded-lg text-sm font-bold tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50 inline-flex items-center gap-1"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              ATTACH
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)]">
+        <h2 className="text-lg font-bold mb-4" style={{ color: "var(--text-primary)" }}>Course resources</h2>
+        {loading ? (
+          <p className="text-sm text-center py-6" style={{ color: "var(--text-muted)" }}>Loading…</p>
+        ) : (
+          <ResourceList items={items} canDelete onDelete={remove} />
         )}
       </div>
     </div>

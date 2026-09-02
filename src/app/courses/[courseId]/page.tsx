@@ -19,6 +19,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
   const [loading, setLoading] = useState(true);
   
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
+  const [moduleProgressMap, setModuleProgressMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -49,6 +50,16 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
         setUserProgress(data.userProgress || null);
         if (data.course.modules && data.course.modules.length > 0) {
           setActiveModuleId(data.course.modules[0].id);
+        }
+        // Fetch module progress (only if enrolled)
+        if (data.isEnrolled) {
+          const mpRes = await fetch(`/api/enroll/progress?courseId=${courseId}`);
+          if (mpRes.ok) {
+            const mp = await mpRes.json();
+            const map: Record<string, boolean> = {};
+            for (const m of mp.modules || []) map[m.moduleId] = m.completed;
+            setModuleProgressMap(map);
+          }
         }
       }
     } catch (err) {
@@ -81,6 +92,32 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const toggleModuleComplete = async (moduleId: string, completed: boolean) => {
+    try {
+      const res = await fetch("/api/enroll/progress", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId, completed }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setModuleProgressMap((prev) => ({ ...prev, [moduleId]: completed }));
+        setUserProgress({
+          progress: data.progress,
+          status: data.status,
+          completedModules: data.completedModules,
+        });
+        showToast(completed ? "Module marked complete" : "Marked incomplete");
+      } else {
+        const msg = await res.text();
+        showToast(msg || "Failed to update progress", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Network error", "error");
     }
   };
 
@@ -149,17 +186,24 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
                   </div>
                 )}
                 <div className="space-y-2">
-                  {course.modules?.map((mod: any, index: number) => (
-                    <button
-                      key={mod.id}
-                      onClick={() => setActiveModuleId(mod.id)}
-                      className={`w-full text-left p-3 rounded-lg flex items-center gap-3 transition-colors ${activeModuleId === mod.id ? 'bg-[#a855f7]/20 text-[#a855f7] border border-[#a855f7]/30' : 'hover:bg-black/5 dark:hover:bg-white/5 border border-transparent'}`}
-                      style={{ color: activeModuleId === mod.id ? "#a855f7" : "var(--text-secondary)" }}
-                    >
-                      <PlayCircle className="w-4 h-4 shrink-0" />
-                      <span className="text-sm font-semibold truncate">{index + 1}. {mod.title}</span>
-                    </button>
-                  ))}
+                  {course.modules?.map((mod: any, index: number) => {
+                    const done = moduleProgressMap[mod.id];
+                    return (
+                      <button
+                        key={mod.id}
+                        onClick={() => setActiveModuleId(mod.id)}
+                        className={`w-full text-left p-3 rounded-lg flex items-center gap-3 transition-colors ${activeModuleId === mod.id ? 'bg-[#a855f7]/20 text-[#a855f7] border border-[#a855f7]/30' : 'hover:bg-black/5 dark:hover:bg-white/5 border border-transparent'}`}
+                        style={{ color: activeModuleId === mod.id ? "#a855f7" : "var(--text-secondary)" }}
+                      >
+                        {done ? (
+                          <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />
+                        ) : (
+                          <PlayCircle className="w-4 h-4 shrink-0" />
+                        )}
+                        <span className="text-sm font-semibold truncate">{index + 1}. {mod.title}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {course.assessments && course.assessments.length > 0 && (
@@ -198,9 +242,24 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
               <div className="glass-panel p-8 md:p-12 rounded-2xl border border-[rgba(255,255,255,0.05)] min-h-[600px]">
                 {activeModule ? (
                   <>
-                    <h1 className="text-3xl font-extrabold mb-8 pb-4 border-b" style={{ color: "var(--text-primary)", borderColor: "var(--border-light)" }}>{activeModule.title}</h1>
+                    <div className="flex items-start justify-between gap-4 mb-8 pb-4 border-b" style={{ borderColor: "var(--border-light)" }}>
+                      <h1 className="text-3xl font-extrabold" style={{ color: "var(--text-primary)" }}>{activeModule.title}</h1>
+                      <button
+                        onClick={() => toggleModuleComplete(activeModule.id, !moduleProgressMap[activeModule.id])}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${
+                          moduleProgressMap[activeModule.id]
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                            : "bg-purple-600 hover:bg-purple-700 text-white"
+                        }`}
+                      >
+                        {moduleProgressMap[activeModule.id] ? (
+                          <><CheckCircle className="w-4 h-4" /> COMPLETED</>
+                        ) : (
+                          "MARK COMPLETE"
+                        )}
+                      </button>
+                    </div>
                     <div className="space-y-4" style={{ color: "var(--text-secondary)" }}>
-                      {/* Very simple rendering for markdown/text */}
                       {activeModule.content.split('\n').map((paragraph: string, i: number) => (
                         <p key={i} className="leading-relaxed">{paragraph}</p>
                       ))}
