@@ -10,39 +10,58 @@ datasource db {
 
 
 model User {
-  id            String              @id @default(cuid())
-  email         String              @unique
-  name          String?
-  password      String
-  role          String              @default("TRAINEE")
-  emailVerified DateTime?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  enrollments   Enrollment[]
-  announcements Announcement[]
-  attempts      AssessmentAttempt[]
+  id               String              @id @default(cuid())
+  email            String              @unique
+  name             String?
+  password         String
+  role             String              @default("TRAINEE")
+  emailVerified    DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  enrollments      Enrollment[]
+  announcements    Announcement[]
+  attempts         AssessmentAttempt[]
+  moduleProgress   ModuleProgress[]
+  feedback         CourseFeedback[]
+  trainerProfile   TrainerProfile?
+  traineeProfile   TraineeProfile?
+  trainerSubjects  TrainerSubject[]
+  trainerResources TrainerResource[]
+
+  @@index([role])
 }
 
 model Course {
-  id          String         @id @default(cuid())
-  title       String
-  description String
-  thumbnail   String?
-  trainerId   String
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  modules     CourseModule[]
-  enrollments Enrollment[]
-  assessments Assessment[]
+  id           String             @id @default(cuid())
+  title        String
+  description  String
+  thumbnail    String?
+  trainerId    String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  modules      CourseModule[]
+  enrollments  Enrollment[]
+  assessments  Assessment[]
+  subjects     CourseSubject[]
+  resources    CourseResource[]
+  feedback     CourseFeedback[]
+  feedbackAvg  Float?
+  feedbackCount Int              @default(0)
+
+  @@index([trainerId])
+  @@index([createdAt])
 }
 
 model CourseModule {
-  id       String @id @default(cuid())
+  id       String           @id @default(cuid())
   title    String
   content  String
   order    Int
   courseId String
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress ModuleProgress[]
+
+  @@index([courseId])
 }
 
 model Enrollment {
@@ -57,6 +76,8 @@ model Enrollment {
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
+  @@index([courseId])
+  @@index([userId])
 }
 
 model Announcement {
@@ -67,17 +88,24 @@ model Announcement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }
 
 model Assessment {
-  id        String              @id @default(cuid())
-  title     String
-  courseId  String
-  course    Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  questions Question[]
-  attempts  AssessmentAttempt[]
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id           String              @id @default(cuid())
+  title        String
+  courseId     String
+  dueDate      DateTime?
+  maxAttempts  Int                 @default(3)
+  passingScore Int                 @default(70)
+  course       Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions    Question[]
+  attempts     AssessmentAttempt[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([courseId])
 }
 
 model Question {
@@ -100,11 +128,154 @@ model AssessmentAttempt {
   id           String     @id @default(cuid())
   userId       String
   assessmentId String
+  attemptNo    Int        @default(1)
   score        Int
   passed       Boolean
   createdAt    DateTime   @default(now())
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assessmentId, attemptNo])
+  @@index([assessmentId])
+  @@index([userId])
+}
+
+model ModuleProgress {
+  id          String       @id @default(cuid())
+  userId      String
+  moduleId    String
+  completed   Boolean      @default(false)
+  completedAt DateTime?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module      CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@index([moduleId])
+}
+
+model CourseFeedback {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model Subject {
+  id        String           @id @default(cuid())
+  name      String           @unique
+  courses   CourseSubject[]
+  trainers  TrainerSubject[]
+  createdAt DateTime         @default(now())
+}
+
+model TrainerSubject {
+  trainerId String
+  subjectId String
+  rating    Int     @default(0)
+  trainer   User    @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([trainerId, subjectId])
+  @@index([subjectId])
+}
+
+model CourseSubject {
+  courseId  String
+  subjectId String
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, subjectId])
+  @@index([subjectId])
+}
+
+model TrainerProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  bio             String?
+  headline        String?
+  yearsExperience Int?
+  hourlyRate      Float?
+  socialLinks     Json?
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TraineeProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  bio            String?
+  headline       String?
+  interests      String[]
+  skills         String[]
+  qualifications Json?
+  experience     Json?
+  certificates   Json?
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TrainerResource {
+  id          String   @id @default(cuid())
+  trainerId   String
+  title       String
+  description String?
+  type        String
+  fileUrl     String
+  fileSize    Int
+  mimeType    String
+  createdAt   DateTime @default(now())
+  trainer     User     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([trainerId])
+  @@index([type])
+}
+
+model CourseResource {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String?
+  type        String
+  fileUrl     String
+  fileSize    Int
+  mimeType    String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String?
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HomepageHighlight {
+  id        String   @id @default(cuid())
+  kind      String
+  refId     String
+  published Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([kind, published])
+  @@index([order])
 }
 
 model PasswordResetToken {
