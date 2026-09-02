@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { createEmailVerificationToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -48,7 +50,20 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ message: "User created successfully" }, { status: 201 });
+    // Send verification email (fire-and-forget)
+    try {
+      const token = await createEmailVerificationToken(email);
+      sendVerificationEmail(email, token).catch((err) =>
+        console.error("[SIGNUP] Verification email failed:", err)
+      );
+    } catch (err) {
+      console.error("[SIGNUP] Token creation failed:", err);
+    }
+
+    return NextResponse.json(
+      { message: "Account created! Please check your email to verify your account." },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

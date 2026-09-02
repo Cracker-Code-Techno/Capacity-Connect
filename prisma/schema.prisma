@@ -15,6 +15,7 @@ model User {
   name          String?
   password      String
   role          String              @default("TRAINEE")
+  emailVerified DateTime?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   enrollments   Enrollment[]
@@ -104,4 +105,20 @@ model AssessmentAttempt {
   createdAt    DateTime   @default(now())
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
 }

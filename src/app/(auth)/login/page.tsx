@@ -123,9 +123,9 @@ export default function LoginPage() {
               <input type="checkbox" className="w-4 h-4 rounded accent-purple-500" />
               <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Remember me</span>
             </label>
-            <a href="#" className="text-sm text-[#a855f7] hover:text-purple-400 transition-colors">
+            <Link href="/forgot-password" className="text-sm text-[#a855f7] hover:text-purple-400 transition-colors">
               Forgot password?
-            </a>
+            </Link>
           </div>
 
           <button
