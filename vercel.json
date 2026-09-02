@@ -1,4 +1,4 @@
 {
-  "buildCommand": "next build",
+  "buildCommand": "prisma db push && next build",
   "installCommand": "npm install"
 }

@@ -17,6 +17,7 @@ async function main() {
       name: "System Administrator",
       password: passwordHash,
       role: "ADMIN",
+      emailVerified: new Date(),
     },
   });
 
@@ -28,6 +29,7 @@ async function main() {
       name: "Senior Trainer Alex",
       password: passwordHash,
       role: "TRAINER",
+      emailVerified: new Date(),
     },
   });
 
@@ -39,6 +41,7 @@ async function main() {
       name: "Jordan Trainee",
       password: passwordHash,
       role: "TRAINEE",
+      emailVerified: new Date(),
     },
   });
 

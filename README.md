@@ -38,12 +38,13 @@ DIRECT_URL="postgres://...?sslmode=require"
 NEXTAUTH_SECRET="some-long-random-string"
 NEXTAUTH_URL="http://localhost:3000"
 
-# Email (Nodemailer) — for verification + password reset
-EMAIL_SERVER_HOST="smtp.example.com"
-EMAIL_SERVER_PORT="587"
-EMAIL_SERVER_USER="user"
-EMAIL_SERVER_PASSWORD="pass"
-EMAIL_FROM="no-reply@capacity-connect.app"
+# Email (Nodemailer) — names read by src/lib/email.ts
+EMAIL_HOST="smtp.example.com"
+EMAIL_PORT="587"
+EMAIL_SECURE="false"           # true for port 465, false for 587 (STARTTLS)
+EMAIL_USER="user"
+EMAIL_PASS="pass"
+EMAIL_FROM="Capacity Connect <no-reply@yourdomain.com>"
 
 # Vercel Blob (optional in dev — falls back to public/uploads/)
 BLOB_READ_WRITE_TOKEN=""
@@ -103,7 +104,7 @@ src/
 - **Middleware file** — Next.js 16 renamed `middleware.ts` to `proxy.ts`. This repo uses `src/proxy.ts` exporting `proxy()`. Do not add a `src/middleware.ts` file.
 - **Rate-limit memory** — `src/lib/rate-limit.ts` uses an in-memory map. In Vercel's serverless environment, state does not survive cold starts across instances; this is a known limitation.
 - **Image domains** — `next.config.ts` allows Unsplash, Supabase storage, GitHub avatars, and Vercel Blob public URLs.
-- **Email** — Outbound mail uses Nodemailer; configure SMTP via `EMAIL_SERVER_*` env vars.
+- **Email** — Outbound mail uses Nodemailer; configure SMTP via `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_SECURE`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`. Port 465 requires `EMAIL_SECURE=true`; port 587 uses STARTTLS with `EMAIL_SECURE=false`. Vercel blocks outbound port 25 — use 465 or 587.
 
 ## Deploy on Vercel
 
