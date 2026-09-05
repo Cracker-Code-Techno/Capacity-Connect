@@ -1,33 +1,92 @@
-CAPACITY CONNECT - Technology Stack
+CAPACITY CONNECT — Technology Stack & Architecture Reference
+Project by: Code Crackers
+Live Demo: https://capacity-connect.vercel.app
 
-Frontend:
-- Next.js 16 (App Router)
-- React 19
-- TypeScript
-- Tailwind CSS v4 (Styling, no config file — theme tokens in globals.css)
-- Framer Motion (Animations, micro-interactions, Reorder for drag)
-- Lucide React (Icons)
-- Next Themes (Dark / light mode toggle)
+================================================================================
+1. CORE ARCHITECTURE & RUNTIME
+================================================================================
+- Framework: Next.js 16.3.3 (App Router with React Server Components & Server Actions)
+- UI Library: React 19.2.8 / React DOM 19.2.8
+- Language: TypeScript 5.x (Strict mode, ES2022 target)
+- Runtime: Node.js 20+ (Serverless Edge & Node runtime compatibility)
+- Package Manager: npm
 
-Backend / API:
-- Next.js API Routes (Serverless handlers) + middleware (src/proxy.ts)
-- Prisma ORM 5 (Database access)
-- PostgreSQL via Supabase (Pooled PgBouncer URL + DIRECT_URL for migrations)
-- Zod (Server-side request validation)
-- @vercel/blob (File / media storage with local public/uploads/ dev fallback)
-- Nodemailer (Transactional email — verification + password reset)
+================================================================================
+2. FRONTEND & USER INTERFACE
+================================================================================
+- Styling & Engine: Tailwind CSS v4 (via @tailwindcss/postcss, CSS variables design tokens in globals.css)
+- Motion & Animation: Framer Motion 13.1.1 (Page transitions, interactive cards, micro-interactions, drag-and-drop reordering)
+- Iconography: Lucide React 1.38.0 (Modern, tree-shakable SVG icon set)
+- Theming: Next Themes 0.4.6 (Dark mode, Light mode, and system preference detection with zero hydration flicker)
+- Typography: Geist Sans & Geist Mono (via next/font/google)
+- Responsive Design: Mobile-first responsive layouts across mobile, tablet, and desktop viewports
 
-Authentication & Security:
-- NextAuth.js (Credentials provider, JWT sessions, role-based middleware)
-- bcryptjs (Password hashing)
-- Custom in-memory rate limiter (per-key, with Origin / CSRF check in proxy.ts)
+================================================================================
+3. DATABASE & PERSISTENCE
+================================================================================
+- Database: PostgreSQL (Hosted on Supabase)
+- Connection Strategy:
+  * Pooled Connection: PgBouncer (capacity_connect_POSTGRES_PRISMA_URL) for low-latency serverless query handling
+  * Direct Connection: Direct TCP (DIRECT_URL) for schema migrations and CLI operations
+- ORM: Prisma ORM 5.10.0 (@prisma/client, prisma CLI)
+- Schema: 16 relational models including Users, Profiles, Courses, Modules, Assessments, Questions, Options, Attempts, Enrollments, Progress, Feedback, Resources, Subjects, Competencies, Highlights, and Auth Tokens
+- Database Seeding: tsx prisma/seed.ts with automated demo accounts (Admin, Trainer, Trainee), announcements, and sample courses
 
-Real-time / Interactivity:
-- @dnd-kit/* (Drag-and-drop primitives, available; Reorder via framer-motion is in use)
+================================================================================
+4. BACKEND & API ARCHITECTURE
+================================================================================
+- Architecture: Next.js App Router Serverless Route Handlers (40+ REST API endpoints)
+- Route Groups & Routing:
+  * Public routes: Course catalog, subjects directory, trainer profiles, marketing pages
+  * Protected route groups: (auth), (dashboard) [admin, trainer, trainee]
+- Validation: Zod 4.5.4 (Strict client/server schema validation for forms, mutations, and API requests)
+- Object & File Storage:
+  * Production: @vercel/blob 2.8.0 (Vercel Blob cloud storage with edge-optimized CDN delivery)
+  * Local Development Fallback: Local file system (public/uploads/) when BLOB_READ_WRITE_TOKEN is not supplied
 
-Development & Tooling:
-- ESLint (Code linting)
-- Husky + lint-staged (Pre-commit lint, pre-push typecheck)
-- Vitest + Playwright (Test runners, config in place)
-- npm (Package management)
-- TypeScript `tsc --noEmit` (Typecheck script)
+================================================================================
+5. AUTHENTICATION & SECURITY
+================================================================================
+- Authentication Engine: NextAuth.js 4.24.15 (Credentials Provider with JWT session strategy)
+- Password Hashing: bcryptjs 3.0.3 (Salted bcrypt hash with 10 rounds)
+- Middleware & Proxy: Next.js 16 proxy convention (`src/proxy.ts` exporting `proxy()`)
+- Role-Based Access Control (RBAC):
+  * ADMIN: Global governance, user management, CMS, competency match, announcements
+  * TRAINER: Course creation, assessment grading, module resources, profile management
+  * TRAINEE: Course enrollment, module progression, assessment attempts, ratings, certification
+- CSRF Protection: Strict Origin / Referer validation for mutating requests (POST, PUT, PATCH, DELETE) in proxy.ts
+- Rate Limiting: In-memory sliding-window rate limiter on sensitive endpoints (login: 5 req/15 min, registration, password reset)
+- HTTP Security Headers: Content-Type nosniff, X-Frame-Options DENY, Referrer-Policy strict-origin-when-cross-origin
+- Domain Image Protection: Next.js remotePatterns whitelist (Unsplash, Supabase, GitHub, Vercel Blob)
+
+================================================================================
+6. COMMUNICATIONS & EMAIL
+================================================================================
+- Email Service: Nodemailer
+- Delivery: HTML transactional email templates with branded styling
+- Workflows:
+  * Account Email Verification (24-hour expiring cryptographically secure token)
+  * Password Reset Flow (1-hour expiring single-use token)
+
+================================================================================
+7. TESTING & QUALITY ASSURANCE
+================================================================================
+- Unit & Component Testing: Vitest 4.1.11 with jsdom environment
+- Testing Utilities:
+  * @testing-library/react 16.3.3
+  * @testing-library/dom 10.4.1
+  * @testing-library/jest-dom 7.0.1
+- End-to-End (E2E) Testing: Playwright 1.62.1 (@playwright/test) with multi-browser coverage
+- Linting: ESLint 9 with eslint-config-next 16.3.3
+- Git Hooks & Pre-commit:
+  * Husky 9.1.7 (Automated Git hooks)
+  * lint-staged 17.4.1 (Pre-commit linting on staged files)
+  * Pre-push validation: TypeScript typecheck (`tsc --noEmit`)
+
+================================================================================
+8. DEPLOYMENT & DEVOPS
+================================================================================
+- Hosting: Vercel Cloud Platform (Serverless edge deployment)
+- Build Optimization: Standalone Next.js build with automated Prisma Client generation (`postinstall: prisma generate`)
+- Configuration: vercel.json custom build & install directives
+- SEO & Metadata: Dynamic sitemap.ts and robots.ts with metadataBase configuration
