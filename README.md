@@ -121,9 +121,6 @@ EMAIL_FROM="Capacity Connect <noreply@yourdomain.com>"
 
 # Cloud Storage (Vercel Blob — optional in local dev)
 BLOB_READ_WRITE_TOKEN=""
-
-# Admin Maintenance Secret (optional)
-ADMIN_PATCH_SECRET="your-admin-patch-secret-key"
 ```
 
 > **Note on Storage:** If `BLOB_READ_WRITE_TOKEN` is left empty in development, uploaded files will automatically be saved locally to `public/uploads/`.

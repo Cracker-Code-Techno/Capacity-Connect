@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BookOpen, CheckCircle, PlayCircle, Lock, HelpCircle, Calendar, FileText, MessageSquare } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle, PlayCircle, Lock, HelpCircle, Calendar, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/components/global/useToast";
@@ -12,16 +12,52 @@ import { FeedbackList } from "@/components/courses/FeedbackList";
 import { RatingStars } from "@/components/courses/RatingStars";
 import { ResourceList, ResourceItem } from "@/components/library/ResourceList";
 
+interface Subject {
+  id: string;
+  name: string;
+}
+
+interface ModuleData {
+  id: string;
+  title: string;
+  content: string;
+  order?: number;
+}
+
+interface AssessmentData {
+  id: string;
+  title: string;
+  dueDate?: string;
+}
+
+interface CourseData {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail?: string | null;
+  modules?: ModuleData[];
+  subjects?: Subject[];
+  assessments?: AssessmentData[];
+  resources?: ResourceItem[];
+  feedbackAvg?: number | null;
+  feedbackCount?: number;
+}
+
+interface UserProgressData {
+  progress?: number;
+  status?: string;
+  completedModules?: number;
+}
 export default function CoursePlayerPage({ params }: { params: Promise<{ courseId: string }> | { courseId: string } }) {
   const { data: session } = useSession();
   const router = useRouter();
   const { showToast } = useToast();
   const [courseId, setCourseId] = useState<string>("");
-  const [course, setCourse] = useState<any>(null);
+  const [course, setCourse] = useState<CourseData | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
-  const [userProgress, setUserProgress] = useState<any>(null);
+  const [userProgress, setUserProgress] = useState<UserProgressData | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [moduleProgressMap, setModuleProgressMap] = useState<Record<string, boolean>>({});
   const [playerTab, setPlayerTab] = useState<"content" | "resources" | "reviews">("content");
@@ -43,8 +79,11 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
         // Fallback for missing direct route
         const allRes = await fetch('/api/courses');
         const allCourses = await allRes.json();
-        const found = allCourses.find((c: any) => c.id === courseId);
-        
+        const found = allCourses.find((c: CourseData) => c.id === courseId);
+        if (found) {
+          setCourse(found);
+        }
+
         // Since the public endpoint might not return modules and assessments, 
         // we'll fetch them from a new dedicated endpoint or just mock for now if it's missing.
         // Wait, we need a dedicated endpoint to fetch full course details!
@@ -76,7 +115,9 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCourseDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
   const handleEnroll = async () => {
@@ -135,7 +176,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
     return <div className="min-h-screen pt-24 text-center text-red-500">Course not found</div>;
   }
 
-  const activeModule = course.modules?.find((m: any) => m.id === activeModuleId);
+  const activeModule = course.modules?.find((m: ModuleData) => m.id === activeModuleId);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ background: "var(--background)" }}>
@@ -153,18 +194,18 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
               <Lock className="w-10 h-10 text-[#a855f7]" />
             </div>
             <h1 className="text-4xl font-extrabold mb-4" style={{ color: "var(--text-primary)" }}>{course.title}</h1>
-              <p className="text-lg mb-6" style={{ color: "var(--text-secondary)" }}>{course.description}</p>
-              {course.subjects && course.subjects.length > 0 && (
-                <div className="mb-6">
-                  <SubjectChips subjects={course.subjects} size="md" />
-                </div>
-              )}
-              <button
-                onClick={handleEnroll}
-                className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold tracking-widest text-lg shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
-              >
-                ENROLL NOW TO UNLOCK
-              </button>
+            <p className="text-lg mb-6" style={{ color: "var(--text-secondary)" }}>{course.description}</p>
+            {course.subjects && course.subjects.length > 0 && (
+              <div className="mb-6">
+                <SubjectChips subjects={course.subjects} size="md" />
+              </div>
+            )}
+            <button
+              onClick={handleEnroll}
+              className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold tracking-widest text-lg shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all"
+            >
+              ENROLL NOW TO UNLOCK
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -192,7 +233,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
                   </div>
                 )}
                 <div className="space-y-2">
-                  {course.modules?.map((mod: any, index: number) => {
+                  {course.modules?.map((mod: ModuleData, index: number) => {
                     const done = moduleProgressMap[mod.id];
                     return (
                       <button
@@ -216,7 +257,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
                   <div className="mt-8">
                     <h2 className="font-bold text-lg mb-4 text-emerald-500">Assessments</h2>
                     <div className="space-y-2">
-                      {course.assessments.map((assessment: any) => (
+                      {course.assessments.map((assessment: AssessmentData) => (
                         <Link
                           key={assessment.id}
                           href={`/courses/${courseId}/assessments/${assessment.id}`}
@@ -248,27 +289,24 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
               <div className="flex border-b mb-6 gap-6" style={{ borderColor: "var(--border-light)" }}>
                 <button
                   onClick={() => setPlayerTab("content")}
-                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative ${
-                    playerTab === "content" ? "text-[#a855f7]" : "text-gray-500"
-                  }`}
+                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative ${playerTab === "content" ? "text-[#a855f7]" : "text-gray-500"
+                    }`}
                 >
                   Content
                   {playerTab === "content" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
                 </button>
                 <button
                   onClick={() => setPlayerTab("resources")}
-                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative ${
-                    playerTab === "resources" ? "text-[#a855f7]" : "text-gray-500"
-                  }`}
+                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative ${playerTab === "resources" ? "text-[#a855f7]" : "text-gray-500"
+                    }`}
                 >
                   Resources ({course.resources?.length || 0})
                   {playerTab === "resources" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
                 </button>
                 <button
                   onClick={() => setPlayerTab("reviews")}
-                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative flex items-center gap-1 ${
-                    playerTab === "reviews" ? "text-[#a855f7]" : "text-gray-500"
-                  }`}
+                  className={`pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative flex items-center gap-1 ${playerTab === "reviews" ? "text-[#a855f7]" : "text-gray-500"
+                    }`}
                 >
                   Reviews ({course.feedbackCount || 0})
                   {playerTab === "reviews" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />}
@@ -283,11 +321,10 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
                         <h1 className="text-3xl font-extrabold" style={{ color: "var(--text-primary)" }}>{activeModule.title}</h1>
                         <button
                           onClick={() => toggleModuleComplete(activeModule.id, !moduleProgressMap[activeModule.id])}
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${
-                            moduleProgressMap[activeModule.id]
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${moduleProgressMap[activeModule.id]
                               ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
                               : "bg-purple-600 hover:bg-purple-700 text-white"
-                          }`}
+                            }`}
                         >
                           {moduleProgressMap[activeModule.id] ? (
                             <><CheckCircle className="w-4 h-4" /> COMPLETED</>
@@ -314,7 +351,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
               {playerTab === "resources" && (
                 <div className="glass-panel p-6 md:p-8 rounded-2xl border border-[rgba(255,255,255,0.05)]">
                   {course.resources && course.resources.length > 0 ? (
-                    <ResourceList items={course.resources as unknown as ResourceItem[]} canDelete={false} />
+                    <ResourceList items={course.resources} canDelete={false} />
                   ) : (
                     <p className="text-sm text-center py-6" style={{ color: "var(--text-muted)" }}>
                       No resources attached yet.

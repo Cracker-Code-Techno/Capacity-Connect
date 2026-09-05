@@ -2,16 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { BookOpen, AlertCircle, Search, User, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/global/useToast";
+import Image from "next/image";
+
+type Course = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail?: string | null;
+  _count?: {
+    modules: number;
+    enrollments: number;
+  };
+};
 
 export default function CoursesPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const { showToast } = useToast();
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -50,8 +61,8 @@ export default function CoursesPage() {
       }
 
       router.push("/trainee");
-    } catch (err: any) {
-      showToast(err.message || "Failed to enroll", "error");
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed to enroll", "error");
       setEnrolling(null);
     }
   };
@@ -65,7 +76,7 @@ export default function CoursesPage() {
       {/* Ambient glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#a855f7]/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#a855f7]/5 blur-[120px] pointer-events-none" />
-      
+
       <div className="w-full max-w-7xl relative z-10">
         {/* Header */}
         <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -81,12 +92,12 @@ export default function CoursesPage() {
               Discover learning modules designed to build capacity and accelerate professional development across the organization.
             </p>
           </div>
-          
+
           <div className="relative w-full md:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search courses..." 
+            <input
+              type="text"
+              placeholder="Search courses..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none transition-all focus:ring-2 focus:ring-[#a855f7]/50"
@@ -116,11 +127,11 @@ export default function CoursesPage() {
             {filteredCourses.map((course) => (
               <div key={course.id} className="glass-card rounded-2xl overflow-hidden flex flex-col relative group">
                 <div className="absolute inset-0 bg-gradient-to-b from-[#a855f7]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                
+
                 {/* Thumbnail placeholder */}
-                <div className="h-48 bg-[rgba(0,0,0,0.1)] border-b" style={{ borderColor: "var(--border-light)" }}>
+                <div className="h-48 bg-[rgba(0,0,0,0.1)] border-b relative" style={{ borderColor: "var(--border-light)" }}>
                   {course.thumbnail ? (
-                    <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                    <Image src={course.thumbnail} alt={course.title || "Course thumbnail"} fill className="object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#a855f7]/10 to-transparent">
                       <BookOpen className="w-12 h-12 text-[#a855f7]/30" />
@@ -137,7 +148,7 @@ export default function CoursesPage() {
                       <User className="w-3 h-3" /> {course._count?.enrollments || 0}
                     </span>
                   </div>
-                  
+
                   <h3 className="text-xl font-bold mb-2 leading-tight" style={{ color: "var(--text-primary)" }}>
                     {course.title}
                   </h3>
@@ -149,10 +160,10 @@ export default function CoursesPage() {
                     onClick={() => handleEnroll(course.id)}
                     disabled={enrolling === course.id}
                     className="w-full py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all"
-                    style={{ 
-                      background: "var(--panel)", 
-                      border: "1px solid var(--border-lit)", 
-                      color: "var(--text-primary)" 
+                    style={{
+                      background: "var(--panel)",
+                      border: "1px solid var(--border-lit)",
+                      color: "var(--text-primary)"
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.background = "#a855f7";

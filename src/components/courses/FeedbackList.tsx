@@ -17,24 +17,23 @@ export function FeedbackList({ courseId }: { courseId: string }) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/courses/${courseId}/feedback?page=${page}`);
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.data);
-        setTotalPages(data.totalPages || 1);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    load();
+    const fetchFeedback = async () => {
+      try {
+        const res = await fetch(`/api/courses/${courseId}/feedback?page=${page}`);
+        if (res.ok) {
+          const data = await res.json();
+          setItems(data.data);
+          setTotalPages(data.totalPages || 1);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedback();
   }, [courseId, page]);
 
   if (loading) {
@@ -75,7 +74,10 @@ export function FeedbackList({ courseId }: { courseId: string }) {
           {Array.from({ length: totalPages }).map((_, i) => (
             <button
               key={i}
-              onClick={() => setPage(i + 1)}
+              onClick={() => {
+                setLoading(true);
+                setPage(i + 1);
+              }}
               className={`px-3 py-1 rounded text-xs font-bold ${
                 page === i + 1 ? "bg-[#a855f7] text-white" : "bg-white/5 text-gray-400"
               }`}

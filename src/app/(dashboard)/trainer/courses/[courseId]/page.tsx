@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, LayoutList, HelpCircle, CheckCircle, X, Loader2, Users } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Reorder } from "framer-motion";
@@ -32,6 +32,7 @@ interface CourseData {
   modules?: ModuleData[];
   assessments?: AssessmentData[];
   subjects?: { id: string; name: string }[];
+  enrollments?: { id: string; name: string; email: string; status: string; progress: number }[];
   _count?: {
     modules?: number;
     assessments?: number;
@@ -73,7 +74,7 @@ export default function CourseManagementPage({
 
   // Tabs
   const initialTab = searchParams?.get("tab") === "assessments" ? "assessments" : "modules";
-  const [activeTab, setActiveTab] = useState<"modules" | "assessments" | "subjects" | "resources">(initialTab);
+  const [activeTab, setActiveTab] = useState<"modules" | "assessments" | "subjects" | "resources" | "trainees">(initialTab);
 
 
   // Module State
@@ -292,7 +293,7 @@ export default function CourseManagementPage({
               {course.assessments?.length || course._count?.assessments || 0} ASSESSMENTS
             </span>
             <span className="font-mono" style={{ color: "var(--text-muted)" }}>
-              {course._count?.enrollments || 0} Trainees Enrolled
+              {course.enrollments?.length ?? course._count?.enrollments ?? 0} Trainees Enrolled
             </span>
           </div>
         </div>
@@ -340,6 +341,17 @@ export default function CourseManagementPage({
           >
             Resources
             {activeTab === "resources" && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("trainees")}
+            className={`pb-4 text-sm font-bold tracking-widest uppercase transition-colors relative ${
+              activeTab === "trainees" ? "text-[#a855f7]" : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            Trainees
+            {activeTab === "trainees" && (
               <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#a855f7]" />
             )}
           </button>
@@ -639,6 +651,63 @@ export default function CourseManagementPage({
 
         {/* RESOURCES TAB */}
         {activeTab === "resources" && <CourseResourcesSection courseId={courseId} />}
+
+        {/* TRAINEES TAB */}
+        {activeTab === "trainees" && (
+          <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)]">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <Users className="w-5 h-5 text-[#a855f7]" /> Enrolled Trainees
+            </h2>
+            {!course.enrollments || course.enrollments.length === 0 ? (
+              <p className="text-sm text-center py-8" style={{ color: "var(--text-secondary)" }}>
+                No trainees are currently enrolled in this course.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b" style={{ borderColor: "var(--border-light)" }}>
+                      <th className="py-3 px-4 text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>Name</th>
+                      <th className="py-3 px-4 text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>Email</th>
+                      <th className="py-3 px-4 text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>Status</th>
+                      <th className="py-3 px-4 text-xs font-bold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {course.enrollments.map((enrollment) => (
+                      <tr key={enrollment.id} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: "var(--border-light)" }}>
+                        <td className="py-4 px-4 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{enrollment.name || "Unknown"}</td>
+                        <td className="py-4 px-4 text-sm" style={{ color: "var(--text-secondary)" }}>{enrollment.email}</td>
+                        <td className="py-4 px-4">
+                          <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                            enrollment.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500' : 
+                            enrollment.status === 'ACTIVE' ? 'bg-blue-500/10 text-blue-500' : 
+                            'bg-gray-500/10 text-gray-400'
+                          }`}>
+                            {enrollment.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-grow h-2 rounded-full overflow-hidden" style={{ background: "var(--border-light)" }}>
+                              <div 
+                                className="h-full bg-gradient-to-r from-blue-500 to-purple-500" 
+                                style={{ width: `${enrollment.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold w-8 text-right" style={{ color: "var(--text-secondary)" }}>
+                              {enrollment.progress}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -653,21 +722,27 @@ function CourseResourcesSection({ courseId }: { courseId: string }) {
   const [type, setType] = useState<string>("lecture");
   const [pending, setPending] = useState<{ url: string; size: number; mimeType: string; fileName: string } | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/courses/${courseId}/resources`);
-      if (res.ok) setItems(await res.json());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/courses/${courseId}/resources`, { signal });
+        if (res.ok) setItems(await res.json());
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") console.error(err);
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [courseId]
+  );
 
   useEffect(() => {
-    load();
-  }, [courseId]);
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional data fetch keyed on courseId
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   const save = async () => {
     if (!pending || !title.trim()) {

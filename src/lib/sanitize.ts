@@ -1,4 +1,4 @@
-export function sanitizeText(input: string): string {
+function sanitizeText(input: string): string {
   return input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<[^>]+on\w+\s*=\s*["'][^"']*["']/gi, "")

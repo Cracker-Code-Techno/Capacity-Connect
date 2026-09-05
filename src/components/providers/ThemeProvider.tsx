@@ -20,10 +20,13 @@ export function ThemeProvider({
 
   // On mount, read saved preference
   useEffect(() => {
-    const saved = localStorage.getItem("cc-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      setThemeState(saved);
-    }
+    const loadTheme = () => {
+      const saved = localStorage.getItem("cc-theme") as Theme | null;
+      if (saved === "light" || saved === "dark") {
+        setThemeState(saved);
+      }
+    };
+    loadTheme();
   }, []);
 
   // Apply class to <html> whenever theme changes

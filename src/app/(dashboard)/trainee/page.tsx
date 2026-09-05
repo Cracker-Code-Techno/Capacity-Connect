@@ -1,4 +1,4 @@
-import { BookOpen, GraduationCap, Clock, Award, PlayCircle, CheckCircle } from "lucide-react";
+import { BookOpen, GraduationCap, Award, PlayCircle } from "lucide-react";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -105,7 +105,7 @@ export default async function TraineeDashboard() {
                 </div>
                 <h2 className="text-xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>No active enrollments</h2>
                 <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-                  You haven't enrolled in any courses yet. Browse the catalog to start learning.
+                  You haven&apos;t enrolled in any courses yet. Browse the catalog to start learning.
                 </p>
                 <Link href="/courses" className="inline-flex items-center justify-center px-6 py-3 text-sm font-bold tracking-widest rounded-lg text-white bg-purple-600 hover:bg-purple-700 transition-all shadow-[0_0_15px_rgba(168,85,247,0.2)]">
                   BROWSE COURSES
@@ -163,6 +163,39 @@ export default async function TraineeDashboard() {
           {/* Sidebar Area (1/3 width) */}
           <div className="xl:col-span-1 flex flex-col gap-6">
             
+            {/* My Certificates */}
+            <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)] relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
+              
+              <h2 className="text-lg font-bold mb-6 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                <Award className="w-5 h-5 text-emerald-500" /> My Certificates
+              </h2>
+              
+              <div className="flex flex-col gap-4">
+                {completedCount === 0 ? (
+                  <p className="text-sm italic" style={{ color: "var(--text-muted)" }}>
+                    You haven&apos;t earned any certificates yet. Complete a course to earn one!
+                  </p>
+                ) : (
+                  enrollments.filter(e => e.status === "COMPLETED").map((enrollment) => (
+                    <div key={enrollment.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                      <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
+                        <GraduationCap className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm leading-tight mb-1" style={{ color: "var(--text-primary)" }}>
+                          {enrollment.course.title}
+                        </h4>
+                        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                          Earned {new Date(enrollment.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
             {/* Announcements Feed */}
             <div className="glass-panel p-6 rounded-2xl border border-[rgba(255,255,255,0.05)] relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />

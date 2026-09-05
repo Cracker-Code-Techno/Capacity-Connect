@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const socialLinksSchema = z
+const socialLinksSchema = z
   .object({
     linkedin: z.string().url().optional().or(z.literal("")),
     github: z.string().url().optional().or(z.literal("")),
@@ -8,13 +8,13 @@ export const socialLinksSchema = z
   })
   .partial();
 
-export const qualificationSchema = z.object({
+const qualificationSchema = z.object({
   title: z.string().min(1).max(200),
   institution: z.string().min(1).max(200),
   year: z.number().int().min(1900).max(2100),
 });
 
-export const experienceSchema = z.object({
+const experienceSchema = z.object({
   company: z.string().min(1).max(200),
   role: z.string().min(1).max(200),
   start: z.string().min(1).max(50),
@@ -22,7 +22,7 @@ export const experienceSchema = z.object({
   description: z.string().max(2000).optional(),
 });
 
-export const certificateSchema = z.object({
+const certificateSchema = z.object({
   name: z.string().min(1).max(200),
   issuer: z.string().min(1).max(200),
   year: z.number().int().min(1900).max(2100),
@@ -46,6 +46,3 @@ export const trainerProfileSchema = z.object({
   hourlyRate: z.number().min(0).max(10000).optional().nullable(),
   socialLinks: socialLinksSchema.optional(),
 });
-
-export type TraineeProfileInput = z.infer<typeof traineeProfileSchema>;
-export type TrainerProfileInput = z.infer<typeof trainerProfileSchema>;

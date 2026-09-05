@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email || (session.user as any).role !== "TRAINER") {
+    if (!session?.user?.email || (session.user as { role?: string }).role !== "TRAINER") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       where: { courseId }
     });
 
-    const module = await prisma.courseModule.create({
+    const courseModule = await prisma.courseModule.create({
       data: {
         courseId,
         title,
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json(module);
+    return NextResponse.json(courseModule);
   } catch (error) {
     console.error("[TRAINER_MODULES_POST]", error);
     return new NextResponse("Internal Error", { status: 500 });

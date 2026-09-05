@@ -1,27 +1,50 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Award } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/components/global/useToast";
 
+type Option = {
+  id: string;
+  text: string;
+};
+
+type Question = {
+  id: string;
+  text: string;
+  options: Option[];
+};
+
+type Assessment = {
+  title: string;
+  questions: Question[];
+};
+
+type AssessmentResult = {
+  passed: boolean;
+  score: number;
+  correctCount: number;
+  totalQuestions: number;
+};
+
 export default function AssessmentPlayerPage({ params }: { params: Promise<{ courseId: string; assessmentId: string }> | { courseId: string; assessmentId: string } }) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const { showToast } = useToast();
   
   const [courseId, setCourseId] = useState<string>("");
   const [assessmentId, setAssessmentId] = useState<string>("");
   
-  const [assessment, setAssessment] = useState<any>(null);
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [loading, setLoading] = useState(true);
   
   // State for taking the quiz
   const [answers, setAnswers] = useState<Record<string, string>>({}); // questionId -> optionId
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<AssessmentResult | null>(null);
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -64,6 +87,8 @@ export default function AssessmentPlayerPage({ params }: { params: Promise<{ cou
   };
 
   const handleSubmit = async () => {
+    if (!assessment) return;
+
     if (Object.keys(answers).length < assessment.questions.length) {
       showToast("Please answer all questions before submitting.", "error");
       return;
@@ -147,13 +172,13 @@ export default function AssessmentPlayerPage({ params }: { params: Promise<{ cou
             </p>
 
             <div className="space-y-10">
-              {assessment.questions.map((q: any, qIndex: number) => (
+              {assessment.questions.map((q, qIndex) => (
                 <div key={q.id}>
                   <h3 className="text-lg font-bold text-white mb-4">
                     <span className="text-emerald-500 mr-2">{qIndex + 1}.</span> {q.text}
                   </h3>
                   <div className="space-y-3">
-                    {q.options.map((opt: any) => {
+                    {q.options.map((opt) => {
                       const isSelected = answers[q.id] === opt.id;
                       return (
                         <button

@@ -13,8 +13,8 @@ export function Navbar() {
   const { theme, setTheme } = useTheme();
 
   const getDashboardLink = () => {
-    if ((session?.user as any)?.role === "TRAINER") return "/trainer";
-    if ((session?.user as any)?.role === "ADMIN") return "/admin";
+    if (session?.user?.role === "TRAINER") return "/trainer";
+    if (session?.user?.role === "ADMIN") return "/admin";
     return "/trainee";
   };
 

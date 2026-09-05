@@ -27,6 +27,17 @@ interface UserData {
   _count?: UserCount;
 }
 
+interface CompetencyMatch {
+  trainerId: string;
+  rating: number | null;
+  trainer: {
+    name: string | null;
+    trainerProfile: {
+      headline: string | null;
+    } | null;
+  };
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -36,6 +47,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null);
 
   // Announcements State
@@ -235,7 +247,7 @@ export default function AdminDashboard() {
     }
   };
 
-    const refreshHighlights = async () => {
+  const refreshHighlights = async () => {
     const r = await fetch("/api/homepage-highlights");
     if (r.ok) setHighlights(await r.json());
   };
@@ -279,7 +291,7 @@ export default function AdminDashboard() {
 
   // Competency Match State
   const [compSubject, setCompSubject] = useState("");
-  const [compResults, setCompResults] = useState<any[]>([]);
+  const [compResults, setCompResults] = useState<CompetencyMatch[]>([]);
   const [compLoading, setCompLoading] = useState(false);
 
   const runMatch = async () => {
@@ -347,10 +359,12 @@ export default function AdminDashboard() {
     { label: "Enrollments", value: stats?.totalEnrollments || 0, icon: Activity, color: "text-amber-500", bg: "bg-amber-500/10" },
   ];
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   return (
     <div className="min-h-screen relative" style={{ background: "var(--background)" }}>
@@ -359,7 +373,7 @@ export default function AdminDashboard() {
       <div className="absolute bottom-0 left-0 w-[30%] h-[30%] rounded-full bg-purple-600/5 blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
-        
+
         {/* Header */}
         <div className="mb-10 border-b pb-6" style={{ borderColor: "var(--border-light)" }}>
           <p className="text-xs font-bold tracking-widest font-mono mb-1 text-[#a855f7]">
@@ -400,8 +414,8 @@ export default function AdminDashboard() {
             <form onSubmit={handlePublishAnnouncement} className="p-6 flex flex-col gap-4 flex-grow">
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: "var(--text-muted)" }}>Title</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   value={announcementTitle}
                   onChange={e => setAnnouncementTitle(e.target.value)}
@@ -412,7 +426,7 @@ export default function AdminDashboard() {
               </div>
               <div className="flex-grow flex flex-col">
                 <label className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: "var(--text-muted)" }}>Message</label>
-                <textarea 
+                <textarea
                   required
                   value={announcementContent}
                   onChange={e => setAnnouncementContent(e.target.value)}
@@ -421,7 +435,7 @@ export default function AdminDashboard() {
                   placeholder="Write your broadcast message here..."
                 />
               </div>
-              <button 
+              <button
                 type="submit"
                 disabled={isPublishing}
                 className="w-full py-3 mt-2 rounded-lg font-bold text-white transition-all bg-purple-600 hover:bg-purple-700 disabled:opacity-50 tracking-widest text-sm"
@@ -433,89 +447,102 @@ export default function AdminDashboard() {
 
           {/* User Management Section */}
           <div className="xl:col-span-2 glass-panel rounded-2xl border border-[rgba(255,255,255,0.05)] overflow-hidden">
-            
-            <div className="p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4" style={{ borderColor: "var(--border-light)" }}>
-            <h2 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>User Directory</h2>
-            
-            <div className="relative max-w-xs w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} />
-              <input 
-                type="text" 
-                placeholder="Search users..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50"
-                style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
-              />
-            </div>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b text-xs font-bold tracking-wider uppercase" style={{ borderColor: "var(--border-light)", color: "var(--text-muted)", background: "rgba(0,0,0,0.2)" }}>
-                  <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Activity</th>
-                  <th className="px-6 py-4">Joined</th>
-                  <th className="px-6 py-4 text-right">Role Access</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b transition-colors hover:bg-black/10 dark:hover:bg-white/5" style={{ borderColor: "var(--border-light)" }}>
-                    <td className="px-6 py-4">
-                      <p className="font-bold" style={{ color: "var(--text-primary)" }}>{user.name}</p>
-                      <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{user.email}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1 text-xs">
-                        {user.role === "TRAINER" ? (
-                          <span className="text-purple-500 font-semibold">{user._count?.createdCourses || 0} Courses Created</span>
-                        ) : (
-                          <span className="text-blue-500 font-semibold">{user._count?.enrollments || 0} Enrollments</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs" style={{ color: "var(--text-secondary)" }}>
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        {user.role === "ADMIN" && <span title="Admin User"><ShieldAlert className="w-4 h-4 text-rose-500" /></span>}
-                        {user.role === "TRAINER" && <span title="Approved Trainer"><CheckCircle2 className="w-4 h-4 text-purple-500" /></span>}
-                        
-                        <select
-                          value={user.role}
-                          disabled={roleUpdating === user.id}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold outline-none border transition-colors cursor-pointer"
-                          style={{ 
-                            background: "var(--card)", 
-                            borderColor: "var(--border-light)", 
-                            color: "var(--text-primary)",
-                            opacity: roleUpdating === user.id ? 0.5 : 1
-                          }}
-                        >
-                          <option value="TRAINEE">Trainee</option>
-                          <option value="TRAINER">Trainer</option>
-                          <option value="ADMIN">Admin</option>
-                        </select>
-                      </div>
-                    </td>
+            <div className="p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4" style={{ borderColor: "var(--border-light)" }}>
+              <h2 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>User Directory</h2>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="px-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50 cursor-pointer"
+                  style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                >
+                  <option value="ALL" style={{ background: "var(--card)", color: "var(--text-primary)" }}>All Roles</option>
+                  <option value="ADMIN" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Admins</option>
+                  <option value="TRAINER" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainers</option>
+                  <option value="TRAINEE" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainees</option>
+                </select>
+                <div className="relative max-w-xs w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a855f7]/50"
+                    style={{ background: "var(--card)", border: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b text-xs font-bold tracking-wider uppercase" style={{ borderColor: "var(--border-light)", color: "var(--text-muted)", background: "rgba(0,0,0,0.2)" }}>
+                    <th className="px-6 py-4">User</th>
+                    <th className="px-6 py-4">Activity</th>
+                    <th className="px-6 py-4">Joined</th>
+                    <th className="px-6 py-4 text-right">Role Access</th>
                   </tr>
-                ))}
-                {filteredUsers.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center" style={{ color: "var(--text-secondary)" }}>
-                      No users found matching your search.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="text-sm">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="border-b transition-colors hover:bg-black/10 dark:hover:bg-white/5" style={{ borderColor: "var(--border-light)" }}>
+                      <td className="px-6 py-4">
+                        <p className="font-bold" style={{ color: "var(--text-primary)" }}>{user.name}</p>
+                        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{user.email}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1 text-xs">
+                          {user.role === "TRAINER" ? (
+                            <span className="text-purple-500 font-semibold">{user._count?.createdCourses || 0} Courses Created</span>
+                          ) : (
+                            <span className="text-blue-500 font-semibold">{user._count?.enrollments || 0} Enrollments</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs" style={{ color: "var(--text-secondary)" }}>
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          {user.role === "ADMIN" && <span title="Admin User"><ShieldAlert className="w-4 h-4 text-rose-500" /></span>}
+                          {user.role === "TRAINER" && <span title="Approved Trainer"><CheckCircle2 className="w-4 h-4 text-purple-500" /></span>}
+
+                          <select
+                            value={user.role}
+                            disabled={roleUpdating === user.id}
+                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold outline-none border transition-colors cursor-pointer"
+                            style={{
+                              background: "var(--card)",
+                              borderColor: "var(--border-light)",
+                              color: "var(--text-primary)",
+                              opacity: roleUpdating === user.id ? 0.5 : 1
+                            }}
+                          >
+                            <option value="TRAINEE" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainee</option>
+                            <option value="TRAINER" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainer</option>
+                            <option value="ADMIN" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Admin</option>
+                          </select>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center" style={{ color: "var(--text-secondary)" }}>
+                        No users found matching your search.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
           </div>
-          
-        </div>
         </div>
 
         {/* CMS: Subjects */}

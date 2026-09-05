@@ -31,8 +31,7 @@ export default function TrainerLibraryPage() {
     }
   }, [status, session, router]);
 
-  const load = async () => {
-    setLoading(true);
+  const fetchResources = async () => {
     try {
       const res = await fetch("/api/trainer/resources");
       if (res.ok) {
@@ -40,13 +39,23 @@ export default function TrainerLibraryPage() {
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
+  const load = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    await fetchResources();
+    setLoading(false);
+  };
+
   useEffect(() => {
-    if (status === "authenticated") load();
+    const init = async () => {
+      if (status === "authenticated") {
+        await fetchResources();
+        setLoading(false);
+      }
+    };
+    init();
   }, [status]);
 
   const savePending = async () => {
@@ -72,7 +81,7 @@ export default function TrainerLibraryPage() {
         setTitle("");
         setDescription("");
         setPendingUpload(null);
-        await load();
+        await load(true);
       } else {
         showToast("Failed to save resource", "error");
       }

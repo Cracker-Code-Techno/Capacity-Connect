@@ -38,9 +38,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(enrollment);
-  } catch (error: any) {
+  } catch (error) {
     console.error("[ENROLL_POST]", error);
-    if (error.code === 'P2002') {
+    const err = error as { code?: string };
+    if (err?.code === 'P2002') {
       return new NextResponse("Already enrolled", { status: 400 });
     }
     return new NextResponse("Internal Error", { status: 500 });

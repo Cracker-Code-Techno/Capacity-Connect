@@ -42,6 +42,11 @@ export async function GET(
             order: true,
           },
         },
+        enrollments: {
+          include: {
+            user: { select: { id: true, name: true, email: true } }
+          }
+        },
       },
     });
 
@@ -113,6 +118,15 @@ export async function GET(
         modules: sanitizedModules,
         resources,
         subjects: course.subjects.map((cs) => ({ id: cs.subject.id, name: cs.subject.name })),
+        enrollments: (user?.role === "ADMIN" || course.trainerId === user?.id) 
+          ? course.enrollments.map(e => ({
+              id: e.user.id,
+              name: e.user.name,
+              email: e.user.email,
+              status: e.status,
+              progress: e.progress
+            }))
+          : undefined,
       },
       isEnrolled,
       userProgress,

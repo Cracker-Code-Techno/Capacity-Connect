@@ -21,11 +21,11 @@ export async function GET(req: Request) {
 
     const where = search
       ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" as const } },
-            { email: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
+        OR: [
+          { name: { contains: search, mode: "insensitive" as const } },
+          { email: { contains: search, mode: "insensitive" as const } },
+        ],
+      }
       : {};
 
     const [users, total] = await Promise.all([
@@ -92,7 +92,7 @@ export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email || (session.user as any).role !== "ADMIN") {
+    if (!session?.user?.email || (session.user as { role?: string }).role !== "ADMIN") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
