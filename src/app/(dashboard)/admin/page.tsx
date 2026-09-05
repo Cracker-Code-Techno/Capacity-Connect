@@ -461,6 +461,7 @@ export default function AdminDashboard() {
                   <option value="ALL" style={{ background: "var(--card)", color: "var(--text-primary)" }}>All Roles</option>
                   <option value="ADMIN" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Admins</option>
                   <option value="TRAINER" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainers</option>
+                  <option value="PENDING_TRAINER" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Pending Trainers</option>
                   <option value="TRAINEE" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainees</option>
                 </select>
                 <div className="relative max-w-xs w-full">
@@ -498,6 +499,8 @@ export default function AdminDashboard() {
                         <div className="flex flex-col gap-1 text-xs">
                           {user.role === "TRAINER" ? (
                             <span className="text-purple-500 font-semibold">{user._count?.createdCourses || 0} Courses Created</span>
+                          ) : user.role === "PENDING_TRAINER" ? (
+                            <span className="text-amber-500 font-semibold">Awaiting Approval</span>
                           ) : (
                             <span className="text-blue-500 font-semibold">{user._count?.enrollments || 0} Enrollments</span>
                           )}
@@ -510,6 +513,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-end gap-3">
                           {user.role === "ADMIN" && <span title="Admin User"><ShieldAlert className="w-4 h-4 text-rose-500" /></span>}
                           {user.role === "TRAINER" && <span title="Approved Trainer"><CheckCircle2 className="w-4 h-4 text-purple-500" /></span>}
+                          {user.role === "PENDING_TRAINER" && <span title="Pending Trainer Application" className="px-2 py-1 rounded bg-amber-500/10 text-amber-500 text-[10px] uppercase font-bold tracking-widest border border-amber-500/20">Pending Approval</span>}
 
                           <select
                             value={user.role}
@@ -524,6 +528,7 @@ export default function AdminDashboard() {
                             }}
                           >
                             <option value="TRAINEE" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainee</option>
+                            <option value="PENDING_TRAINER" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Pending Trainer</option>
                             <option value="TRAINER" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Trainer</option>
                             <option value="ADMIN" style={{ background: "var(--card)", color: "var(--text-primary)" }}>Admin</option>
                           </select>

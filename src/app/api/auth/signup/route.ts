@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password } = await req.json();
+    const { name, email, password, role } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         name,
         email,
         password: hashedPassword,
-        role: "TRAINEE", // All new accounts start as TRAINEE. Admins can promote via the admin dashboard.
+        role: role === "TRAINER" ? "PENDING_TRAINER" : "TRAINEE",
       },
     });
 
