@@ -204,9 +204,18 @@ function ResetPasswordForm() {
         )}
 
         {error && (
-          <p className="text-sm text-rose-400 bg-rose-500/10 px-4 py-3 rounded-xl border border-rose-500/20">
-            {error}
-          </p>
+          <div className="text-sm text-rose-400 bg-rose-500/10 px-4 py-3 rounded-xl border border-rose-500/20 space-y-1">
+            <p>{error}</p>
+            {error.toLowerCase().includes("invalid") || error.toLowerCase().includes("expired") ? (
+              <p className="text-xs text-rose-300">
+                If you requested multiple links, please ensure you are using the latest email, or{" "}
+                <Link href="/forgot-password" className="text-[#a855f7] hover:underline font-semibold">
+                  request a new link
+                </Link>
+                .
+              </p>
+            ) : null}
+          </div>
         )}
 
         <button

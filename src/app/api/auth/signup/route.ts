@@ -30,10 +30,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const existingUser =
+      (await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      })) ||
+      (await prisma.user.findFirst({
+        where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      }));
 
     if (existingUser) {
       return NextResponse.json({ message: "User already exists" }, { status: 409 });
@@ -44,7 +49,7 @@ export async function POST(req: Request) {
     await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         role: role === "TRAINER" ? "PENDING_TRAINER" : "TRAINEE",
       },
@@ -52,8 +57,8 @@ export async function POST(req: Request) {
 
     // Send verification email (fire-and-forget)
     try {
-      const token = await createEmailVerificationToken(email);
-      sendVerificationEmail(email, token).catch((err) =>
+      const token = await createEmailVerificationToken(normalizedEmail);
+      sendVerificationEmail(normalizedEmail, token).catch((err) =>
         console.error("[SIGNUP] Verification email failed:", err)
       );
     } catch (err) {

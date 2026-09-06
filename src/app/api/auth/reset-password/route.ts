@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { validatePasswordResetToken, deletePasswordResetToken } from "@/lib/tokens";
+import { validatePasswordResetToken, deleteAllPasswordResetTokens } from "@/lib/tokens";
 
 export async function POST(req: Request) {
   try {
@@ -27,15 +27,36 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Look up user by normalized email or case-insensitively
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      });
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { message: "User account could not be found." },
+        { status: 404 }
+      );
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Update password and heal email casing by id
     await prisma.user.update({
-      where: { email },
-      data: { password: hashedPassword },
+      where: { id: user.id },
+      data: { password: hashedPassword, email: normalizedEmail },
     });
 
-    // Invalidate the token after use
-    await deletePasswordResetToken(token);
+    // Invalidate all tokens for this email after successful reset
+    await deleteAllPasswordResetTokens(normalizedEmail);
+    if (user.email && user.email !== normalizedEmail) {
+      await deleteAllPasswordResetTokens(user.email);
+    }
 
     return NextResponse.json({ message: "Password updated successfully." }, { status: 200 });
   } catch (error) {

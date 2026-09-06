@@ -22,13 +22,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Email is required." }, { status: 400 });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Always return success to prevent email enumeration
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const user =
+      (await prisma.user.findUnique({ where: { email: normalizedEmail } })) ||
+      (await prisma.user.findFirst({
+        where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      }));
 
     if (user) {
-      const token = await createPasswordResetToken(email.toLowerCase());
+      const token = await createPasswordResetToken(normalizedEmail);
       // Fire and forget — don't await to prevent timing attacks leaking user existence
-      sendPasswordResetEmail(email.toLowerCase(), token).catch((err) =>
+      sendPasswordResetEmail(normalizedEmail, token).catch((err) =>
         console.error("[FORGOT_PASSWORD] Email send failed:", err)
       );
     }

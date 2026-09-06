@@ -24,14 +24,20 @@ export const authOptions: NextAuthOptions = {
           ? forwardedFor.split(",")[0].trim()
           : (rawHeaders?.["x-real-ip"] as string | undefined) ?? "127.0.0.1";
 
-        const rl = rateLimit(`login:${ip}:${credentials.email.toLowerCase()}`, { limit: 5, windowMs: 15 * 60 * 1000 });
+        const normalizedEmail = credentials.email.trim().toLowerCase();
+
+        const rl = rateLimit(`login:${ip}:${normalizedEmail}`, { limit: 5, windowMs: 15 * 60 * 1000 });
         if (!rl.success) {
           throw new Error("Too many login attempts. Please try again later.");
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
+        const user =
+          (await prisma.user.findUnique({
+            where: { email: normalizedEmail }
+          })) ||
+          (await prisma.user.findFirst({
+            where: { email: { equals: normalizedEmail, mode: "insensitive" } }
+          }));
 
         if (!user || !user.password) {
           throw new Error("Invalid email or password");
@@ -88,5 +94,11 @@ export const authOptions: NextAuthOptions = {
 export async function getUserFromSession(session?: Session | null) {
   const s = session ?? (await getServerSession(authOptions));
   if (!s?.user?.email) return null;
-  return prisma.user.findUnique({ where: { email: s.user.email } });
+  const normalizedEmail = s.user.email.trim().toLowerCase();
+  return (
+    (await prisma.user.findUnique({ where: { email: normalizedEmail } })) ||
+    (await prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+    }))
+  );
 }

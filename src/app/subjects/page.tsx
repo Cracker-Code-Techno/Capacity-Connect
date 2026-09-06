@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,15 +9,30 @@ export const metadata: Metadata = {
   description: "Browse courses and trainers by subject area.",
 };
 
+export const dynamic = "force-dynamic";
+
+type SubjectWithCount = Prisma.SubjectGetPayload<{
+  include: {
+    _count: {
+      select: { courses: true; trainers: true };
+    };
+  };
+}>;
+
 export default async function SubjectsPage() {
-  const subjects = await prisma.subject.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      _count: {
-        select: { courses: true, trainers: true },
+  let subjects: SubjectWithCount[] = [];
+  try {
+    subjects = await prisma.subject.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        _count: {
+          select: { courses: true, trainers: true },
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error("[SUBJECTS_PAGE] Failed to fetch subjects:", error);
+  }
 
   return (
     <div className="flex-grow flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8" style={{ background: "var(--background)" }}>
