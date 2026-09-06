@@ -21,10 +21,13 @@ export async function PUT(
       return new NextResponse("Missing title or content", { status: 400 });
     }
 
-    // Verify ownership via course
+    // Verify ownership via course (lean select)
     const existingModule = await prisma.courseModule.findUnique({
       where: { id: moduleId },
-      include: { course: true },
+      select: {
+        id: true,
+        course: { select: { trainerId: true } },
+      },
     });
 
     if (!existingModule) return new NextResponse("Not Found", { status: 404 });
@@ -58,10 +61,13 @@ export async function DELETE(
 
     const moduleId = params.moduleId;
 
-    // Verify ownership via course
+    // Verify ownership via course (lean select)
     const existingModule = await prisma.courseModule.findUnique({
       where: { id: moduleId },
-      include: { course: true },
+      select: {
+        id: true,
+        course: { select: { trainerId: true } },
+      },
     });
 
     if (!existingModule) return new NextResponse("Not Found", { status: 404 });
@@ -79,4 +85,3 @@ export async function DELETE(
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
-

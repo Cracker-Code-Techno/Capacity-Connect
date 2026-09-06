@@ -42,11 +42,6 @@ export async function GET(
             order: true,
           },
         },
-        enrollments: {
-          include: {
-            user: { select: { id: true, name: true, email: true } }
-          }
-        },
       },
     });
 
@@ -56,6 +51,7 @@ export async function GET(
 
     let isEnrolled = false;
     let hasFullAccess = false;
+    let userEnrollment: { progress: number; status: string } | null = null;
 
     if (user) {
       if (user.role === "ADMIN" || course.trainerId === user.id) {
@@ -69,9 +65,16 @@ export async function GET(
               courseId: course.id,
             },
           },
+          select: {
+            progress: true,
+            status: true,
+          },
         });
-        isEnrolled = !!enrollment;
-        hasFullAccess = isEnrolled;
+        if (enrollment) {
+          isEnrolled = true;
+          hasFullAccess = true;
+          userEnrollment = enrollment;
+        }
       }
     }
 
@@ -99,38 +102,54 @@ export async function GET(
 
     let userProgress: { progress: number; status: string; completedModules: number } | null = null;
     if (user && isEnrolled && user.role === "TRAINEE") {
-      const enrollment = await prisma.enrollment.findUnique({
-        where: { userId_courseId: { userId: user.id, courseId: course.id } },
-      });
       const completedModules = await prisma.moduleProgress.count({
         where: { userId: user.id, module: { courseId: course.id }, completed: true },
       });
       userProgress = {
-        progress: enrollment?.progress ?? 0,
-        status: enrollment?.status ?? "ACTIVE",
+        progress: userEnrollment?.progress ?? 0,
+        status: userEnrollment?.status ?? "ACTIVE",
         completedModules,
       };
     }
 
-    return NextResponse.json({
-      course: {
-        ...course,
-        modules: sanitizedModules,
-        resources,
-        subjects: course.subjects.map((cs) => ({ id: cs.subject.id, name: cs.subject.name })),
-        enrollments: (user?.role === "ADMIN" || course.trainerId === user?.id) 
-          ? course.enrollments.map(e => ({
-              id: e.user.id,
-              name: e.user.name,
-              email: e.user.email,
-              status: e.status,
-              progress: e.progress
-            }))
-          : undefined,
+    // Only load all enrollments if caller is ADMIN or the trainer who owns this course
+    let courseEnrollments: { id: string; name: string | null; email: string; status: string; progress: number }[] | undefined = undefined;
+    if (user && (user.role === "ADMIN" || course.trainerId === user.id)) {
+      const enrollmentsData = await prisma.enrollment.findMany({
+        where: { courseId: course.id },
+        select: {
+          status: true,
+          progress: true,
+          user: { select: { id: true, name: true, email: true } },
+        },
+      });
+      courseEnrollments = enrollmentsData.map((e) => ({
+        id: e.user.id,
+        name: e.user.name,
+        email: e.user.email,
+        status: e.status,
+        progress: e.progress,
+      }));
+    }
+
+    return NextResponse.json(
+      {
+        course: {
+          ...course,
+          modules: sanitizedModules,
+          resources,
+          subjects: course.subjects.map((cs) => ({ id: cs.subject.id, name: cs.subject.name })),
+          enrollments: courseEnrollments,
+        },
+        isEnrolled,
+        userProgress,
       },
-      isEnrolled,
-      userProgress,
-    });
+      {
+        headers: {
+          "Cache-Control": user ? "private, no-cache" : "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error) {
     console.error("[COURSE_DETAILS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });

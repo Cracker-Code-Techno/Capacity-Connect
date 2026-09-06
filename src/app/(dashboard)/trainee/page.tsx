@@ -1,51 +1,53 @@
 import { BookOpen, GraduationCap, Award, PlayCircle } from "lucide-react";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function TraineeDashboard() {
-  const session = await getServerSession(authOptions);
+  const user = await getUserFromSession();
   
-  if (!session?.user?.email) {
+  if (!user) {
     redirect("/login");
   }
 
-  const [user, announcements] = await Promise.all([
-    prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        enrollments: {
-          include: {
-            course: {
-              include: {
-                _count: {
-                  select: { modules: true }
-                }
-              }
-            }
+  const [enrollments, announcements] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: { userId: user.id },
+      select: {
+        id: true,
+        status: true,
+        progress: true,
+        courseId: true,
+        updatedAt: true,
+        course: {
+          select: {
+            title: true,
+            _count: {
+              select: { modules: true },
+            },
           },
-          orderBy: {
-            updatedAt: 'desc'
-          }
-        }
-      }
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
     }),
     prisma.announcement.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 5,
-      include: {
-        author: { select: { name: true } }
-      }
-    })
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        createdAt: true,
+        author: { select: { name: true } },
+      },
+    }),
   ]);
 
-  if (!user) redirect("/login");
-
-  const enrollments = user.enrollments;
-  const activeCount = enrollments.filter(e => e.status === "ACTIVE").length;
-  const completedCount = enrollments.filter(e => e.status === "COMPLETED").length;
+  const activeCount = enrollments.filter((e) => e.status === "ACTIVE").length;
+  const completedCount = enrollments.filter((e) => e.status === "COMPLETED").length;
 
   const stats = [
     { label: "Enrolled Courses", value: enrollments.length.toString(), icon: BookOpen },

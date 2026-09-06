@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BookOpen, AlertCircle, Search, User, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/global/useToast";
 import Image from "next/image";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 type Course = {
   id: string;
@@ -22,24 +24,20 @@ export default function CoursesPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const { showToast } = useToast();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
-  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    fetch("/api/courses")
-      .then((res) => res.json())
-      .then((data) => {
-        setCourses(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load courses");
-        setLoading(false);
-      });
-  }, []);
+  const { data: rawCourses, error: swrError, isLoading: loading } = useSWR<Course[]>(
+    "/api/courses",
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+    }
+  );
+
+  const courses = Array.isArray(rawCourses) ? rawCourses : [];
+  const error = swrError ? "Failed to load courses" : "";
 
   const handleEnroll = async (courseId: string) => {
     if (!session) {

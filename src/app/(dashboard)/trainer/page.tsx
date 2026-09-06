@@ -1,47 +1,47 @@
-import { BookOpen, Users, Plus, Edit } from "lucide-react";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { BookOpen, Users, Plus } from "lucide-react";
+import { getUserFromSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import CourseCard from "./CourseCard";
 
 export default async function TrainerDashboard() {
-  const session = await getServerSession(authOptions);
+  const user = await getUserFromSession();
   
-  if (!session?.user?.email || (session.user as any).role !== "TRAINER") {
+  if (!user || user.role !== "TRAINER") {
     redirect("/login");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
-
-  if (!user) redirect("/login");
-
-  // Fetch courses and announcements concurrently
+  // Fetch courses and announcements concurrently with narrow selects
   const [courses, announcements] = await Promise.all([
     prisma.course.findMany({
       where: { trainerId: user.id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
         _count: {
-          select: { modules: true, enrollments: true }
-        }
+          select: { modules: true, enrollments: true },
+        },
       },
       orderBy: {
-        updatedAt: 'desc'
-      }
+        updatedAt: "desc",
+      },
     }),
     prisma.announcement.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 5,
-      include: {
-        author: { select: { name: true } }
-      }
-    })
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        createdAt: true,
+        author: { select: { name: true } },
+      },
+    }),
   ]);
 
-  const totalTrainees = courses.reduce((sum: number, course: any) => sum + course._count.enrollments, 0);
+  const totalTrainees = courses.reduce((sum, course) => sum + course._count.enrollments, 0);
 
   const stats = [
     { label: "My Courses", value: courses.length.toString(), icon: BookOpen },
@@ -104,7 +104,7 @@ export default async function TrainerDashboard() {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {courses.map((course: any) => (
+                {courses.map((course) => (
                   <CourseCard key={course.id} course={course} />
                 ))}
               </div>

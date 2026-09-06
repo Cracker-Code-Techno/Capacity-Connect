@@ -16,10 +16,13 @@ export async function DELETE(
 
     const assessmentId = params.assessmentId;
 
-    // Verify ownership via course
+    // Verify ownership via course (lean select)
     const existingAssessment = await prisma.assessment.findUnique({
       where: { id: assessmentId },
-      include: { course: true },
+      select: {
+        id: true,
+        course: { select: { trainerId: true } },
+      },
     });
 
     if (!existingAssessment) return new NextResponse("Not Found", { status: 404 });
@@ -37,4 +40,3 @@ export async function DELETE(
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
-

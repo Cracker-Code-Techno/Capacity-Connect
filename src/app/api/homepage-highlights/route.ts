@@ -13,7 +13,13 @@ export async function GET(req: Request) {
       where: !showAll && user?.role !== "ADMIN" ? { published: true } : undefined,
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
     });
-    return NextResponse.json(items);
+
+    const headers: Record<string, string> = {};
+    if (!showAll && (!user || user.role !== "ADMIN")) {
+      headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=300";
+    }
+
+    return NextResponse.json(items, { headers });
   } catch (error) {
     console.error("[HIGHLIGHTS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });

@@ -18,7 +18,11 @@ export async function POST(req: Request) {
     }
     const { courseId, title, dueDate, maxAttempts, passingScore, questions } = parsed.data;
 
-    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    // Lean course lookup to verify trainer ownership
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true, trainerId: true },
+    });
     if (!course) return new NextResponse("Course not found", { status: 404 });
     if (user.role !== "ADMIN" && course.trainerId !== user.id) {
       return new NextResponse("Forbidden", { status: 403 });

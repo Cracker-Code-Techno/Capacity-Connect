@@ -14,28 +14,29 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const assessment = await prisma.assessment.findUnique({
-      where: { id: params.assessmentId },
-      include: {
-        questions: {
-          include: {
-            options: {
-              select: { id: true, text: true, questionId: true },
+    const [assessment, priorAttempts] = await Promise.all([
+      prisma.assessment.findUnique({
+        where: { id: params.assessmentId },
+        include: {
+          questions: {
+            include: {
+              options: {
+                select: { id: true, text: true, questionId: true },
+              },
             },
           },
         },
-      },
-    });
+      }),
+      prisma.assessmentAttempt.findMany({
+        where: {
+          userId: user.id,
+          assessmentId: params.assessmentId,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     if (!assessment) return new NextResponse("Assessment not found", { status: 404 });
-
-    const priorAttempts = await prisma.assessmentAttempt.findMany({
-      where: {
-        userId: user.id,
-        assessmentId: assessment.id,
-      },
-      orderBy: { createdAt: "desc" },
-    });
 
     return NextResponse.json({
       ...assessment,
@@ -70,4 +71,3 @@ export async function POST(
     headers: { "content-type": resp.headers.get("content-type") || "application/json" },
   });
 }
-

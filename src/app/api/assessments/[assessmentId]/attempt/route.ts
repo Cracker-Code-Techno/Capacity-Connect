@@ -19,22 +19,39 @@ export async function POST(
     }
     const { answers } = parsed.data;
 
-    const assessment = await prisma.assessment.findUnique({
-      where: { id: params.assessmentId },
-      include: {
-        questions: { include: { options: true } },
-        course: { select: { id: true, _count: { select: { modules: true } } } },
-      },
-    });
+    // Run assessment lookup and prior attempt count concurrently
+    const [assessment, priorCount] = await Promise.all([
+      prisma.assessment.findUnique({
+        where: { id: params.assessmentId },
+        select: {
+          id: true,
+          dueDate: true,
+          maxAttempts: true,
+          passingScore: true,
+          courseId: true,
+          course: { select: { id: true, _count: { select: { modules: true } } } },
+          questions: {
+            select: {
+              id: true,
+              options: {
+                where: { isCorrect: true },
+                select: { id: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.assessmentAttempt.count({
+        where: { userId: user.id, assessmentId: params.assessmentId },
+      }),
+    ]);
+
     if (!assessment) return new NextResponse("Assessment not found", { status: 404 });
 
     if (assessment.dueDate && new Date() > new Date(assessment.dueDate)) {
       return new NextResponse("Assessment deadline has passed", { status: 403 });
     }
 
-    const priorCount = await prisma.assessmentAttempt.count({
-      where: { userId: user.id, assessmentId: assessment.id },
-    });
     if (priorCount >= assessment.maxAttempts) {
       return NextResponse.json(
         { error: `Maximum attempts (${assessment.maxAttempts}) reached` },
@@ -46,12 +63,22 @@ export async function POST(
     if (totalQuestions === 0) {
       return new NextResponse("Assessment has no questions", { status: 400 });
     }
-    let correctCount = 0;
+
+    // Pre-index correct options in a Map for O(1) lookups
+    const correctMap = new Map<string, string>();
     for (const q of assessment.questions) {
-      const selected = answers[q.id];
-      const correct = q.options.find((o) => o.isCorrect);
-      if (correct && selected === correct.id) correctCount++;
+      if (q.options[0]?.id) {
+        correctMap.set(q.id, q.options[0].id);
+      }
     }
+
+    let correctCount = 0;
+    for (const [qId, correctOptionId] of correctMap.entries()) {
+      if (answers[qId] === correctOptionId) {
+        correctCount++;
+      }
+    }
+
     const score = Math.round((correctCount / totalQuestions) * 100);
     const passed = score >= assessment.passingScore;
     const attemptNo = priorCount + 1;

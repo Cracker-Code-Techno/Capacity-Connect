@@ -6,68 +6,112 @@ import { HeroButtons } from "./_components/HeroButtons";
 // Revalidate every 60 s at the page level so the CDN caches the rendered HTML
 export const revalidate = 60;
 
+type CourseWithModules = {
+  id: string;
+  title: string;
+  description: string;
+  modules: { id: string; title: string }[];
+};
+
+type AnnouncementWithAuthor = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+  author: { name: string | null; role: string };
+};
+
+type AchievementItem = {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string | null;
+};
+
+type HighlightItem = {
+  id: string;
+  kind: string;
+  refId: string;
+  order: number;
+  published: boolean;
+};
+
 export default async function Home() {
-  // All data fetched server-side in a single Promise.all — zero client HTTP calls
-  const [announcements, courses, achievements, highlights] = await Promise.all([
-    prisma.announcement.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      include: { author: { select: { name: true, role: true } } },
-    }),
-    prisma.course.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        modules: { take: 3, orderBy: { order: "asc" }, select: { id: true, title: true } },
-      },
-    }),
-    prisma.achievement.findMany({
-      where: { published: true },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    }),
-    prisma.homepageHighlight.findMany({
-      where: { published: true },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-      take: 6,
-    }),
-  ]);
-
-  // Resolve highlight references in a single batch — no serial waterfall
-  const courseRefIds = highlights.filter((h) => h.kind === "course").map((h) => h.refId);
-  const announcementRefIds = highlights.filter((h) => h.kind === "announcement").map((h) => h.refId);
-  const achievementRefIds = highlights.filter((h) => h.kind === "achievement").map((h) => h.refId);
-
-  const [hlCourses, hlAnnouncements, hlAchievements] = await Promise.all([
-    courseRefIds.length
-      ? prisma.course.findMany({
-          where: { id: { in: courseRefIds } },
-          select: { id: true, title: true, description: true },
-        })
-      : Promise.resolve([]),
-    announcementRefIds.length
-      ? prisma.announcement.findMany({
-          where: { id: { in: announcementRefIds } },
-          select: { id: true, title: true, content: true },
-        })
-      : Promise.resolve([]),
-    achievementRefIds.length
-      ? prisma.achievement.findMany({
-          where: { id: { in: achievementRefIds } },
-          select: { id: true, title: true, description: true },
-        })
-      : Promise.resolve([]),
-  ]);
-
+  let announcements: AnnouncementWithAuthor[] = [];
+  let courses: CourseWithModules[] = [];
+  let achievements: AchievementItem[] = [];
+  let highlights: HighlightItem[] = [];
   const highlightMap: Record<string, { title: string; description?: string; content?: string }> = {};
-  for (const c of hlCourses) highlightMap[c.id] = { title: c.title, description: c.description };
-  for (const a of hlAnnouncements) highlightMap[a.id] = { title: a.title, content: a.content };
-  for (const a of hlAchievements) highlightMap[a.id] = { title: a.title, description: a.description };
 
-  const allModules = courses.flatMap((c) => c.modules).slice(0, 3);
+  try {
+    // All data fetched server-side in a single Promise.all — zero client HTTP calls
+    const [resAnnouncements, resCourses, resAchievements, resHighlights] = await Promise.all([
+      prisma.announcement.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        include: { author: { select: { name: true, role: true } } },
+      }),
+      prisma.course.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          modules: { take: 3, orderBy: { order: "asc" }, select: { id: true, title: true } },
+        },
+      }),
+      prisma.achievement.findMany({
+        where: { published: true },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
+      prisma.homepageHighlight.findMany({
+        where: { published: true },
+        orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+        take: 6,
+      }),
+    ]);
+
+    announcements = resAnnouncements as AnnouncementWithAuthor[];
+    courses = resCourses as CourseWithModules[];
+    achievements = resAchievements as AchievementItem[];
+    highlights = resHighlights as HighlightItem[];
+
+    // Resolve highlight references in a single batch — no serial waterfall
+    const courseRefIds = highlights.filter((h) => h.kind === "course").map((h) => h.refId);
+    const announcementRefIds = highlights.filter((h) => h.kind === "announcement").map((h) => h.refId);
+    const achievementRefIds = highlights.filter((h) => h.kind === "achievement").map((h) => h.refId);
+
+    const [hlCourses, hlAnnouncements, hlAchievements] = await Promise.all([
+      courseRefIds.length
+        ? prisma.course.findMany({
+            where: { id: { in: courseRefIds } },
+            select: { id: true, title: true, description: true },
+          })
+        : Promise.resolve([]),
+      announcementRefIds.length
+        ? prisma.announcement.findMany({
+            where: { id: { in: announcementRefIds } },
+            select: { id: true, title: true, content: true },
+          })
+        : Promise.resolve([]),
+      achievementRefIds.length
+        ? prisma.achievement.findMany({
+            where: { id: { in: achievementRefIds } },
+            select: { id: true, title: true, description: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    for (const c of hlCourses) highlightMap[c.id] = { title: c.title, description: c.description };
+    for (const a of hlAnnouncements) highlightMap[a.id] = { title: a.title, content: a.content };
+    for (const a of hlAchievements) highlightMap[a.id] = { title: a.title, description: a.description };
+  } catch (error) {
+    console.error("[HOMEPAGE_FETCH_ERROR]", error);
+  }
+
+  const allModules = courses.flatMap((c) => c.modules || []).slice(0, 3);
 
   return (
     <div className="flex flex-col min-h-screen relative overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)" }}>

@@ -86,19 +86,51 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
+export interface SessionUser {
+  id: string;
+  email: string;
+  role: string;
+  name?: string | null;
+}
+
 /**
- * Shared helper — fetches the current session and resolves it to the DB user
- * in a single call. Returns null if unauthenticated or user not found.
- * Use this in API routes instead of repeating getServerSession + findUnique.
+ * Returns lightweight session identity (id, email, role, name) directly from
+ * the decoded JWT session without triggering any database queries.
+ */
+export async function getSessionUser(session?: Session | null): Promise<SessionUser | null> {
+  const s = session ?? (await getServerSession(authOptions));
+  if (!s?.user?.id || !s.user.email) return null;
+  return {
+    id: s.user.id,
+    email: s.user.email,
+    role: (s.user as { role?: string }).role || "TRAINEE",
+    name: s.user.name,
+  };
+}
+
+/**
+ * Shared helper — fetches the current session and resolves it to the DB user.
+ * Uses primary-key ID lookup first (O(1) B-tree index), falling back to indexed email.
+ * Returns null if unauthenticated or user not found.
  */
 export async function getUserFromSession(session?: Session | null) {
   const s = session ?? (await getServerSession(authOptions));
-  if (!s?.user?.email) return null;
-  const normalizedEmail = s.user.email.trim().toLowerCase();
-  return (
-    (await prisma.user.findUnique({ where: { email: normalizedEmail } })) ||
-    (await prisma.user.findFirst({
+  if (!s?.user) return null;
+
+  if (s.user.id) {
+    const user = await prisma.user.findUnique({ where: { id: s.user.id } });
+    if (user) return user;
+  }
+
+  if (s.user.email) {
+    const normalizedEmail = s.user.email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (user) return user;
+
+    return prisma.user.findFirst({
       where: { email: { equals: normalizedEmail, mode: "insensitive" } },
-    }))
-  );
+    });
+  }
+
+  return null;
 }
