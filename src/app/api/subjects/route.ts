@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getUserFromSession } from "@/lib/auth";
 import { subjectSchema } from "@/lib/validators/subjects";
 
+const PUBLIC_CACHE = "public, s-maxage=120, stale-while-revalidate=600";
+
 export async function GET() {
   try {
     const subjects = await prisma.subject.findMany({
@@ -13,7 +15,9 @@ export async function GET() {
         },
       },
     });
-    return NextResponse.json(subjects);
+    return NextResponse.json(subjects, {
+      headers: { "Cache-Control": PUBLIC_CACHE },
+    });
   } catch (error) {
     console.error("[SUBJECTS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });

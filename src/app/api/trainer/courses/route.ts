@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as { role?: string }).role !== "TRAINER") {
+    if (!user || user.role !== "TRAINER") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -18,18 +17,12 @@ export async function POST(req: Request) {
       return new NextResponse("Title and description are required", { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
-
     const course = await prisma.course.create({
       data: {
         title,
         description,
         trainerId: user.id,
-      }
+      },
     });
 
     return NextResponse.json(course);

@@ -29,25 +29,27 @@ export async function PATCH(req: Request) {
     });
     if (!enrollment) return new NextResponse("Not enrolled in this course", { status: 403 });
 
+    // Step 1: upsert progress record
     await prisma.moduleProgress.upsert({
       where: { userId_moduleId: { userId: user.id, moduleId } },
       create: { userId: user.id, moduleId, completed, completedAt: completed ? new Date() : null },
       update: { completed, completedAt: completed ? new Date() : null },
     });
 
+    // Step 2: recalculate and persist progress in one transaction
     const totalModules = mod.course._count.modules || 1;
     const completedCount = await prisma.moduleProgress.count({
       where: { userId: user.id, module: { courseId: mod.courseId }, completed: true },
     });
     const progress = Math.min(100, Math.round((completedCount / totalModules) * 100));
+    const newStatus = progress >= 100 ? "COMPLETED" : enrollment.status;
 
-    const updated = await prisma.enrollment.update({
-      where: { id: enrollment.id },
-      data: {
-        progress,
-        status: progress >= 100 ? "COMPLETED" : enrollment.status,
-      },
-    });
+    const [updated] = await prisma.$transaction([
+      prisma.enrollment.update({
+        where: { id: enrollment.id },
+        data: { progress, status: newStatus },
+      }),
+    ]);
 
     return NextResponse.json({
       progress: updated.progress,

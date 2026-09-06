@@ -4,10 +4,9 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("capacity_connect_POSTGRES_PRISMA_URL") // Pooled via PgBouncer — used at runtime
-  directUrl = env("DIRECT_URL")                           // Direct connection — used for migrations only
+  url       = env("capacity_connect_POSTGRES_PRISMA_URL")
+  directUrl = env("DIRECT_URL")
 }
-
 
 model User {
   id               String              @id @default(cuid())
@@ -15,40 +14,40 @@ model User {
   name             String?
   password         String
   role             String              @default("TRAINEE")
-  emailVerified    DateTime?
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
-  enrollments      Enrollment[]
+  emailVerified    DateTime?
   announcements    Announcement[]
   attempts         AssessmentAttempt[]
-  moduleProgress   ModuleProgress[]
-  feedback         CourseFeedback[]
-  trainerProfile   TrainerProfile?
-  traineeProfile   TraineeProfile?
-  trainerSubjects  TrainerSubject[]
-  trainerResources TrainerResource[]
   courses          Course[]
+  feedback         CourseFeedback[]
+  enrollments      Enrollment[]
+  moduleProgress   ModuleProgress[]
+  traineeProfile   TraineeProfile?
+  trainerProfile   TrainerProfile?
+  trainerResources TrainerResource[]
+  trainerSubjects  TrainerSubject[]
 
   @@index([role])
 }
 
 model Course {
-  id           String             @id @default(cuid())
-  title        String
-  description  String
-  thumbnail    String?
-  trainerId    String
-  trainer      User               @relation(fields: [trainerId], references: [id], onDelete: Cascade)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  modules      CourseModule[]
-  enrollments  Enrollment[]
-  assessments  Assessment[]
-  subjects     CourseSubject[]
-  resources    CourseResource[]
-  feedback     CourseFeedback[]
-  feedbackAvg  Float?
+  id            String           @id @default(cuid())
+  title         String
+  description   String
+  thumbnail     String?
+  trainerId     String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  feedbackAvg   Float?
   feedbackCount Int              @default(0)
+  assessments   Assessment[]
+  trainer       User             @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  feedback      CourseFeedback[]
+  modules       CourseModule[]
+  resources     CourseResource[]
+  subjects      CourseSubject[]
+  enrollments   Enrollment[]
 
   @@index([trainerId])
   @@index([createdAt])
@@ -70,12 +69,12 @@ model Enrollment {
   id        String   @id @default(cuid())
   userId    String
   courseId  String
-  status    String   @default("ACTIVE") // PENDING, ACTIVE, COMPLETED
+  status    String   @default("ACTIVE")
   progress  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@index([courseId])
@@ -98,14 +97,14 @@ model Assessment {
   id           String              @id @default(cuid())
   title        String
   courseId     String
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
   dueDate      DateTime?
   maxAttempts  Int                 @default(3)
   passingScore Int                 @default(70)
   course       Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  questions    Question[]
   attempts     AssessmentAttempt[]
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  questions    Question[]
 
   @@index([courseId])
 }
@@ -114,8 +113,8 @@ model Question {
   id           String     @id @default(cuid())
   text         String
   assessmentId String
-  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   options      Option[]
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
 }
 
 model Option {
@@ -130,12 +129,12 @@ model AssessmentAttempt {
   id           String     @id @default(cuid())
   userId       String
   assessmentId String
-  attemptNo    Int        @default(1)
   score        Int
   passed       Boolean
   createdAt    DateTime   @default(now())
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attemptNo    Int        @default(1)
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, assessmentId, attemptNo])
   @@index([assessmentId])
@@ -148,8 +147,8 @@ model ModuleProgress {
   moduleId    String
   completed   Boolean      @default(false)
   completedAt DateTime?
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   module      CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, moduleId])
   @@index([userId])
@@ -164,8 +163,8 @@ model CourseFeedback {
   comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@index([courseId])
@@ -174,17 +173,17 @@ model CourseFeedback {
 model Subject {
   id        String           @id @default(cuid())
   name      String           @unique
+  createdAt DateTime         @default(now())
   courses   CourseSubject[]
   trainers  TrainerSubject[]
-  createdAt DateTime         @default(now())
 }
 
 model TrainerSubject {
   trainerId String
   subjectId String
   rating    Int     @default(0)
-  trainer   User    @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  trainer   User    @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@id([trainerId, subjectId])
   @@index([subjectId])

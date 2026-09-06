@@ -1,37 +1,31 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as { role?: string }).role !== "ADMIN") {
+    if (!user || user.role !== "ADMIN") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const [
-      totalUsers,
-      totalAdmins,
-      totalTrainers,
-      totalTrainees,
-      totalCourses,
-      totalEnrollments,
-    ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { role: "ADMIN" } }),
-      prisma.user.count({ where: { role: "TRAINER" } }),
-      prisma.user.count({ where: { role: "TRAINEE" } }),
+    // Collapse 4 user-count queries into a single groupBy
+    const [roleCounts, totalCourses, totalEnrollments] = await Promise.all([
+      prisma.user.groupBy({ by: ["role"], _count: { id: true } }),
       prisma.course.count(),
       prisma.enrollment.count(),
     ]);
 
+    const byRole = Object.fromEntries(
+      roleCounts.map((r) => [r.role, r._count.id])
+    );
+
     return NextResponse.json({
-      totalUsers,
-      totalAdmins,
-      totalTrainers,
-      totalTrainees,
+      totalUsers: roleCounts.reduce((s, r) => s + r._count.id, 0),
+      totalAdmins: byRole["ADMIN"] ?? 0,
+      totalTrainers: byRole["TRAINER"] ?? 0,
+      totalTrainees: byRole["TRAINEE"] ?? 0,
       totalCourses,
       totalEnrollments,
     });

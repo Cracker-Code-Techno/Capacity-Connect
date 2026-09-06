@@ -9,11 +9,20 @@ export async function GET(req: Request) {
     const showAll = url.searchParams.get("all") === "1";
     const user = await getUserFromSession();
 
+    const isAdmin = user?.role === "ADMIN";
+
     const items = await prisma.achievement.findMany({
-      where: !showAll && user?.role !== "ADMIN" ? { published: true } : undefined,
+      where: !showAll && !isAdmin ? { published: true } : undefined,
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(items);
+
+    // Only publicly-scoped (no ?all=1) responses are safe to cache
+    const headers =
+      !showAll && !isAdmin
+        ? { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" }
+        : { "Cache-Control": "private, no-store" };
+
+    return NextResponse.json(items, { headers });
   } catch (error) {
     console.error("[ACHIEVEMENTS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });

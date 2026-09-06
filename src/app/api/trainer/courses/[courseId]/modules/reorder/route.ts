@@ -1,30 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ courseId: string }> | { courseId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email || (session.user as { role?: string }).role !== "TRAINER") {
+    const user = await getUserFromSession();
+    if (!user || user.role !== "TRAINER") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const resolvedParams = await params;
     const courseId = resolvedParams.courseId;
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
-
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-    });
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
 
     if (!course || course.trainerId !== user.id) {
       return new NextResponse("Unauthorized to modify this course", { status: 403 });

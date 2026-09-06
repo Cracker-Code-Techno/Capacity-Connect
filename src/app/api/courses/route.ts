@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const MAX_PAGE_SIZE = 20;
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(
+      MAX_PAGE_SIZE,
+      Math.max(1, parseInt(searchParams.get("limit") || "20", 10))
+    );
     const search = searchParams.get("search") || "";
 
     const skip = (page - 1) * limit;
@@ -24,11 +29,15 @@ export async function GET(req: Request) {
         where,
         skip: searchParams.has("page") ? skip : undefined,
         take: searchParams.has("limit") ? limit : undefined,
-        include: {
-          modules: {
-            orderBy: { order: "asc" },
-            select: { id: true, title: true, order: true },
-          },
+        // Use _count instead of full modules include on the catalog endpoint –
+        // the module list is only needed on the individual course detail page.
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          trainerId: true,
+          createdAt: true,
+          updatedAt: true,
           _count: {
             select: { modules: true, enrollments: true, assessments: true },
           },
@@ -40,22 +49,28 @@ export async function GET(req: Request) {
       prisma.course.count({ where }),
     ]);
 
+    const headers = {
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+    };
+
     if (searchParams.has("page") || searchParams.has("limit")) {
-      return NextResponse.json({
-        data: courses,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
+      return NextResponse.json(
+        {
+          data: courses,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
         },
-      });
+        { headers }
+      );
     }
 
-    return NextResponse.json(courses);
+    return NextResponse.json(courses, { headers });
   } catch (error) {
     console.error("[COURSES_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
-

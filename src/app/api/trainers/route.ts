@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { RESOURCE_TYPES } from "@/lib/validators/resources";
 
+const PUBLIC_CACHE = "public, s-maxage=60, stale-while-revalidate=300";
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -18,7 +20,9 @@ export async function GET(req: Request) {
       select: {
         id: true,
         name: true,
-        trainerProfile: { select: { bio: true, headline: true, yearsExperience: true, hourlyRate: true } },
+        trainerProfile: {
+          select: { bio: true, headline: true, yearsExperience: true, hourlyRate: true },
+        },
         trainerSubjects: {
           include: { subject: { select: { id: true, name: true } } },
         },
@@ -35,9 +39,14 @@ export async function GET(req: Request) {
         headline: t.trainerProfile?.headline,
         yearsExperience: t.trainerProfile?.yearsExperience,
         hourlyRate: t.trainerProfile?.hourlyRate,
-        subjects: t.trainerSubjects.map((ts) => ({ id: ts.subject.id, name: ts.subject.name, rating: ts.rating })),
+        subjects: t.trainerSubjects.map((ts) => ({
+          id: ts.subject.id,
+          name: ts.subject.name,
+          rating: ts.rating,
+        })),
         resourceCount: t._count.trainerResources,
-      }))
+      })),
+      { headers: { "Cache-Control": PUBLIC_CACHE } }
     );
   } catch (error) {
     console.error("[TRAINERS_GET]", error);

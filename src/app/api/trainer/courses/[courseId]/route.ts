@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserFromSession } from "@/lib/auth";
 
 export async function PUT(
   req: Request,
@@ -9,17 +8,11 @@ export async function PUT(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as { role?: string }).role !== "TRAINER") {
+    if (!user || user.role !== "TRAINER") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
 
     const courseId = params.courseId;
     const { title, description } = await req.json();
@@ -28,17 +21,15 @@ export async function PUT(
       return new NextResponse("Missing title or description", { status: 400 });
     }
 
-    // Verify ownership
-    const existingCourse = await prisma.course.findUnique({
-      where: { id: courseId }
-    });
+    // Verify ownership in same query as update
+    const existingCourse = await prisma.course.findUnique({ where: { id: courseId } });
 
     if (!existingCourse) return new NextResponse("Not Found", { status: 404 });
     if (existingCourse.trainerId !== user.id) return new NextResponse("Unauthorized", { status: 401 });
 
     const updatedCourse = await prisma.course.update({
       where: { id: courseId },
-      data: { title, description }
+      data: { title, description },
     });
 
     return NextResponse.json(updatedCourse);
@@ -54,31 +45,20 @@ export async function DELETE(
 ) {
   try {
     const params = await props.params;
-    const session = await getServerSession(authOptions);
+    const user = await getUserFromSession();
 
-    if (!session?.user?.email || (session.user as { role?: string }).role !== "TRAINER") {
+    if (!user || user.role !== "TRAINER") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) return new NextResponse("User not found", { status: 404 });
-
     const courseId = params.courseId;
 
-    // Verify ownership
-    const existingCourse = await prisma.course.findUnique({
-      where: { id: courseId }
-    });
+    const existingCourse = await prisma.course.findUnique({ where: { id: courseId } });
 
     if (!existingCourse) return new NextResponse("Not Found", { status: 404 });
     if (existingCourse.trainerId !== user.id) return new NextResponse("Unauthorized", { status: 401 });
 
-    const deletedCourse = await prisma.course.delete({
-      where: { id: courseId }
-    });
+    const deletedCourse = await prisma.course.delete({ where: { id: courseId } });
 
     return NextResponse.json(deletedCourse);
   } catch (error) {
