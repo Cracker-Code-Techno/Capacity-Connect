@@ -26,7 +26,7 @@ export const authOptions: NextAuthOptions = {
 
         const normalizedEmail = credentials.email.trim().toLowerCase();
 
-        const rl = rateLimit(`login:${ip}:${normalizedEmail}`, { limit: 5, windowMs: 15 * 60 * 1000 });
+        const rl = rateLimit(`login:${ip}:${normalizedEmail}`, { limit: 5, windowMs: 60 * 1000 });
         if (!rl.success) {
           throw new Error("Too many login attempts. Please try again later.");
         }

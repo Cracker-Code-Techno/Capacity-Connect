@@ -162,6 +162,19 @@ export default function SignupPage() {
               <option value="TRAINEE">Trainee</option>
               <option value="TRAINER">Trainer</option>
             </select>
+            
+            {formData.role === "TRAINER" && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 overflow-hidden"
+              >
+                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-500/90 leading-relaxed">
+                  Your trainer account will require admin approval. Once registered, your application will be submitted for review.
+                </p>
+              </motion.div>
+            )}
           </div>
 
           <button
