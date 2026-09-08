@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, BookOpen, CheckCircle, PlayCircle, Lock, HelpCircle, Calendar, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -58,6 +58,10 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
   const [userProgress, setUserProgress] = useState<UserProgressData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const searchParams = useSearchParams();
+  // Deep link support: /courses/<id>?module=<moduleId> opens that module directly.
+  const requestedModuleId = searchParams.get("module");
+
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [moduleProgressMap, setModuleProgressMap] = useState<Record<string, boolean>>({});
   const [playerTab, setPlayerTab] = useState<"content" | "resources" | "reviews">("content");
@@ -94,7 +98,11 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
         setIsEnrolled(data.isEnrolled);
         setUserProgress(data.userProgress || null);
         if (data.course.modules && data.course.modules.length > 0) {
-          setActiveModuleId(data.course.modules[0].id);
+          // Fall back to the first module if the requested one isn't in this course.
+          const requested = requestedModuleId
+            ? data.course.modules.find((m: ModuleData) => m.id === requestedModuleId)
+            : null;
+          setActiveModuleId(requested ? requested.id : data.course.modules[0].id);
         }
         // Fetch module progress (only if enrolled)
         if (data.isEnrolled) {

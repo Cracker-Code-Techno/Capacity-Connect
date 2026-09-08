@@ -111,7 +111,11 @@ export default async function Home() {
     console.error("[HOMEPAGE_FETCH_ERROR]", error);
   }
 
-  const allModules = courses.flatMap((c) => c.modules || []).slice(0, 3);
+  // Carry the parent course id on each module so the Node Status panel can link
+  // straight to that module inside its course.
+  const allModules = courses
+    .flatMap((c) => (c.modules || []).map((m) => ({ ...m, courseId: c.id })))
+    .slice(0, 3);
 
   return (
     <div className="flex flex-col min-h-screen relative overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)" }}>
@@ -170,7 +174,11 @@ export default async function Home() {
               <div className="space-y-4">
                 {announcements.length > 0 ? (
                   announcements.map((ann) => (
-                    <div key={ann.id} className="flex gap-4 p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                    <Link
+                      key={ann.id}
+                      href={`/announcements/${ann.id}`}
+                      className="flex gap-4 p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.02)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a855f7]/50"
+                    >
                       <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#a855f7] shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
                       <div>
                         <h4 className="font-semibold text-sm line-clamp-1" style={{ color: "var(--text-primary)" }}>
@@ -180,7 +188,7 @@ export default async function Home() {
                           {new Date(ann.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>No broadcasts active.</p>
@@ -200,7 +208,11 @@ export default async function Home() {
               <div className="space-y-4">
                 {allModules.length > 0 ? (
                   allModules.map((mod, i) => (
-                    <div key={mod.id || i} className="flex gap-4 p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                    <Link
+                      key={mod.id || i}
+                      href={`/courses/${mod.courseId}?module=${mod.id}`}
+                      className="flex gap-4 p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.02)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a855f7]/50"
+                    >
                       <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#10b981] shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                       <div>
                         <h4 className="font-semibold text-sm line-clamp-1" style={{ color: "var(--text-primary)" }}>
@@ -208,7 +220,7 @@ export default async function Home() {
                         </h4>
                         <p className="text-xs mt-1 font-mono text-[#10b981]">ONLINE</p>
                       </div>
-                    </div>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>Nodes offline.</p>
@@ -228,7 +240,11 @@ export default async function Home() {
               <div className="space-y-4">
                 {courses.length > 0 ? (
                   courses.map((course) => (
-                    <div key={course.id} className="flex gap-3 p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.02)]">
+                    <Link
+                      key={course.id}
+                      href={`/courses/${course.id}`}
+                      className="flex gap-3 p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.02)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a855f7]/50"
+                    >
                       <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 border" style={{ background: "var(--card)", borderColor: "var(--border-light)" }}>
                         <BookOpen className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
                       </div>
@@ -240,7 +256,7 @@ export default async function Home() {
                           ID: 0x{course.id.substring(course.id.length - 4).toUpperCase()}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>No data available.</p>
