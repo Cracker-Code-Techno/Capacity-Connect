@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Reorder } from "framer-motion";
 import ModuleCard from "./ModuleCard";
-import AssessmentCard from "./AssessmentCard";
+import AssessmentCard, { type AssessmentSummary } from "./AssessmentCard";
 import { useToast } from "@/components/global/useToast";
 import { SubjectPicker } from "@/components/subjects/SubjectPicker";
 import { ResourceUploader } from "@/components/library/ResourceUploader";
@@ -20,10 +20,9 @@ interface ModuleData {
   order?: number;
 }
 
-interface AssessmentData {
-  id?: string;
-  [key: string]: unknown;
-}
+// The card component owns the shape it renders; alias it here so the two
+// cannot drift apart.
+type AssessmentData = AssessmentSummary;
 
 interface CourseData {
   id?: string;

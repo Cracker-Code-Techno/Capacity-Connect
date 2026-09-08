@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { escapeHtml } from "./sanitize";
 
 function getTransporter() {
   return nodemailer.createTransport({
@@ -88,20 +89,26 @@ export async function sendContactEmail(
   const transporter = getTransporter();
   const supportEmail = process.env.EMAIL_SUPPORT ?? FROM;
 
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safeSubject = escapeHtml(subject);
+  const safeMessage = escapeHtml(message);
+
   await transporter.sendMail({
     from: FROM,
     to: supportEmail, // Send to the support inbox
     replyTo: email, // So hitting 'reply' replies to the user
-    subject: `[Contact Form] ${subject}`,
+    // Strip CR/LF to prevent header injection in the subject line
+    subject: `[Contact Form] ${subject.replace(/[\r\n]+/g, " ")}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#0b101c;color:#e5e7eb;border-radius:16px">
         <h1 style="font-size:20px;font-weight:800;margin:0 0 16px;color:#ffffff">New Contact Form Submission</h1>
-        <p style="font-size:14px;color:#9ca3af;margin:0 0 8px"><strong>Name:</strong> ${name}</p>
-        <p style="font-size:14px;color:#9ca3af;margin:0 0 8px"><strong>Email:</strong> ${email}</p>
-        <p style="font-size:14px;color:#9ca3af;margin:0 0 24px"><strong>Subject:</strong> ${subject}</p>
+        <p style="font-size:14px;color:#9ca3af;margin:0 0 8px"><strong>Name:</strong> ${safeName}</p>
+        <p style="font-size:14px;color:#9ca3af;margin:0 0 8px"><strong>Email:</strong> ${safeEmail}</p>
+        <p style="font-size:14px;color:#9ca3af;margin:0 0 24px"><strong>Subject:</strong> ${safeSubject}</p>
         
         <div style="background:#1f2937;padding:16px;border-radius:8px;font-size:15px;color:#e5e7eb;white-space:pre-wrap;">
-          ${message}
+          ${safeMessage}
         </div>
         
         <hr style="border:none;border-top:1px solid #1f2937;margin:32px 0 24px"/>

@@ -3,11 +3,17 @@
 import { useState } from "react";
 import { Trash2, AlertTriangle, X, Loader2 } from "lucide-react";
 
+export interface AssessmentSummary {
+  id: string;
+  title: string;
+  questions?: { id: string }[];
+}
+
 export default function AssessmentCard({
   assessment,
   onRefresh,
 }: {
-  assessment: any;
+  assessment: AssessmentSummary;
   onRefresh: () => void;
 }) {
   const [isDeleting, setIsDeleting] = useState(false);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendContactEmail } from "@/lib/email";
+import { contactSchema } from "@/lib/validators/auth";
 
 export async function POST(req: Request) {
   try {
@@ -22,12 +23,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const { name, email, subject, message } = body;
-
-    if (!name || !email || !subject || !message) {
-      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+    const parsed = contactSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: "Invalid submission", errors: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+    const { name, email, subject, message } = parsed.data;
 
     // Fire and forget email
     sendContactEmail(name, email, subject, message).catch((err) => {

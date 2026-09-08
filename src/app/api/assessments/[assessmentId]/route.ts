@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromSession } from "@/lib/auth";
+import { POST as submitAttempt } from "./attempt/route";
 
 export async function GET(
   req: Request,
@@ -52,22 +53,9 @@ export async function POST(
   req: Request,
   props: { params: Promise<{ assessmentId: string }> }
 ) {
-  // Legacy POST. Routes to /api/assessments/[id]/attempt for grading logic.
-  const params = await props.params;
-  const body = await req.text();
-  const url = new URL(req.url);
-  url.pathname = `/api/assessments/${params.assessmentId}/attempt`;
-  const fwdHeaders = new Headers(req.headers);
-  fwdHeaders.delete("host");
-  fwdHeaders.delete("content-length");
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: fwdHeaders,
-    body,
-  });
-  const text = await resp.text();
-  return new NextResponse(text, {
-    status: resp.status,
-    headers: { "content-type": resp.headers.get("content-type") || "application/json" },
-  });
+  // Legacy POST. Delegates in-process to the /attempt handler that owns the
+  // grading logic — previously this re-issued a real HTTP request to itself,
+  // costing a full network round-trip (and an extra function invocation on
+  // serverless) for every submission.
+  return submitAttempt(req, props);
 }

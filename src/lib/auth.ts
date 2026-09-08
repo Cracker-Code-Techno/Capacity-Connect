@@ -109,26 +109,58 @@ export async function getSessionUser(session?: Session | null): Promise<SessionU
 }
 
 /**
- * Shared helper — fetches the current session and resolves it to the DB user.
+ * Columns every caller of `getUserFromSession` actually reads. Selecting
+ * explicitly keeps the bcrypt password hash (and any future sensitive column)
+ * out of the row that gets loaded on every authenticated API request.
+ */
+const SESSION_USER_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  emailVerified: true,
+} as const;
+
+export type SessionDbUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  emailVerified: Date | null;
+};
+
+/**
+ * Shared helper — fetches the current session and resolves it to the DB user,
+ * so authorization always reads the live role rather than the role frozen into
+ * the JWT at sign-in time.
  * Uses primary-key ID lookup first (O(1) B-tree index), falling back to indexed email.
  * Returns null if unauthenticated or user not found.
  */
-export async function getUserFromSession(session?: Session | null) {
+export async function getUserFromSession(
+  session?: Session | null
+): Promise<SessionDbUser | null> {
   const s = session ?? (await getServerSession(authOptions));
   if (!s?.user) return null;
 
   if (s.user.id) {
-    const user = await prisma.user.findUnique({ where: { id: s.user.id } });
+    const user = await prisma.user.findUnique({
+      where: { id: s.user.id },
+      select: SESSION_USER_SELECT,
+    });
     if (user) return user;
   }
 
   if (s.user.email) {
     const normalizedEmail = s.user.email.trim().toLowerCase();
-    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: SESSION_USER_SELECT,
+    });
     if (user) return user;
 
     return prisma.user.findFirst({
       where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      select: SESSION_USER_SELECT,
     });
   }
 

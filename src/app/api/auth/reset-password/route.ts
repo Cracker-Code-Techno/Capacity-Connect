@@ -2,21 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { validatePasswordResetToken, deleteAllPasswordResetTokens } from "@/lib/tokens";
+import { resetPasswordSchema } from "@/lib/validators/auth";
 
 export async function POST(req: Request) {
   try {
-    const { token, password } = await req.json();
-
-    if (!token || !password || typeof token !== "string" || typeof password !== "string") {
-      return NextResponse.json({ message: "Token and password are required." }, { status: 400 });
-    }
-
-    if (password.length < 8) {
+    const parsed = resetPasswordSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
       return NextResponse.json(
-        { message: "Password must be at least 8 characters." },
+        { message: fieldErrors.password?.[0] ?? "Token and password are required." },
         { status: 400 }
       );
     }
+    const { token, password } = parsed.data;
 
     const email = await validatePasswordResetToken(token);
 

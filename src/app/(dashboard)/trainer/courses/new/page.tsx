@@ -31,8 +31,8 @@ export default function NewCoursePage() {
 
       router.push("/trainer");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to create course");
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Failed to create course");
       setLoading(false);
     }
   };

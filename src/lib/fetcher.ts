@@ -1,20 +1,26 @@
-export class FetchError extends Error {
-  info: any;
-  status: number;
+export class FetchError<TInfo = unknown> extends Error {
+  readonly info: TInfo;
+  readonly status: number;
 
-  constructor(message: string, info: any, status: number) {
+  constructor(message: string, info: TInfo, status: number) {
     super(message);
+    this.name = "FetchError";
     this.info = info;
     this.status = status;
   }
 }
 
-export const fetcher = async <T = any>(url: string): Promise<T> => {
+interface ErrorPayload {
+  error?: string;
+  message?: string;
+}
+
+export const fetcher = async <T>(url: string): Promise<T> => {
   const res = await fetch(url);
   if (!res.ok) {
-    let info: any = {};
+    let info: ErrorPayload = {};
     try {
-      info = await res.json();
+      info = (await res.json()) as ErrorPayload;
     } catch {
       // not json
     }
@@ -24,5 +30,5 @@ export const fetcher = async <T = any>(url: string): Promise<T> => {
       res.status
     );
   }
-  return res.json();
+  return res.json() as Promise<T>;
 };

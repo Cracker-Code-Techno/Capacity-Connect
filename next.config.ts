@@ -21,7 +21,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  productionBrowserSourceMaps: true,
+  // Source maps were being shipped to production, exposing readable original
+  // source to anyone opening devtools and materially slowing the build.
+  productionBrowserSourceMaps: process.env.NODE_ENV !== "production",
+  // Don't advertise the framework/version to attackers.
+  poweredByHeader: false,
+  compress: true,
+  experimental: {
+    // Import only the icons/components actually used instead of the barrel file.
+    optimizePackageImports: ["lucide-react", "framer-motion"],
+  },
   async headers() {
     return [
       {
@@ -38,6 +47,18 @@ const nextConfig: NextConfig = {
           {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
           },
         ],
       },

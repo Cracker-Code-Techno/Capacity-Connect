@@ -13,8 +13,18 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { courseId } = body;
 
-    if (!courseId) {
+    if (!courseId || typeof courseId !== "string") {
       return new NextResponse("Course ID is required", { status: 400 });
+    }
+
+    // Without this check a bad courseId surfaces as a foreign-key error and a
+    // confusing 500 rather than a 404.
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true },
+    });
+    if (!course) {
+      return new NextResponse("Course not found", { status: 404 });
     }
 
     const enrollment = await prisma.enrollment.create({

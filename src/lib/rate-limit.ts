@@ -5,9 +5,11 @@ interface RateLimitRecord {
 
 const rateLimitMap = new Map<string, RateLimitRecord>();
 
-// Periodic cleanup of expired rate limit entries every 5 minutes
+// Periodic cleanup of expired rate limit entries every 5 minutes.
+// The timer is unref'd so it never keeps a serverless invocation (or a test
+// runner) alive purely to sweep an in-memory map.
 if (typeof setInterval !== "undefined") {
-  setInterval(() => {
+  const sweep = setInterval(() => {
     const now = Date.now();
     for (const [key, record] of rateLimitMap.entries()) {
       if (now > record.resetAt) {
@@ -15,6 +17,7 @@ if (typeof setInterval !== "undefined") {
       }
     }
   }, 5 * 60 * 1000);
+  (sweep as { unref?: () => void }).unref?.();
 }
 
 export interface RateLimitOptions {

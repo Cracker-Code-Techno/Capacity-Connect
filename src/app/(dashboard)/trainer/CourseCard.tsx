@@ -6,7 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/global/useToast";
 
-export default function CourseCard({ course }: { course: any }) {
+export interface TrainerCourseSummary {
+  id: string;
+  title: string;
+  description: string;
+  _count: { modules: number; enrollments: number };
+}
+
+export default function CourseCard({ course }: { course: TrainerCourseSummary }) {
   const router = useRouter();
   const { showToast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);

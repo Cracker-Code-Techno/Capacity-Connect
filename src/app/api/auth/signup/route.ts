@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { createEmailVerificationToken } from "@/lib/tokens";
 import { sendVerificationEmail } from "@/lib/email";
+import { signupSchema } from "@/lib/validators/auth";
 
 export async function POST(req: Request) {
   try {
@@ -24,13 +25,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, role } = await req.json();
-
-    if (!name || !email || !password) {
-      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+    const parsed = signupSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return NextResponse.json(
+        {
+          message:
+            fieldErrors.password?.[0] ??
+            fieldErrors.email?.[0] ??
+            fieldErrors.name?.[0] ??
+            "Invalid registration details",
+          errors: fieldErrors,
+        },
+        { status: 400 }
+      );
     }
-
-    const normalizedEmail = email.trim().toLowerCase();
+    // signupSchema already trims the name and normalizes the email to lowercase.
+    const { name, email: normalizedEmail, password, role } = parsed.data;
 
     const existingUser =
       (await prisma.user.findUnique({

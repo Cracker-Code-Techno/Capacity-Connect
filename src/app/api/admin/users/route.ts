@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromSession } from "@/lib/auth";
+import { updateUserRoleSchema } from "@/lib/validators/auth";
 
 const MAX_PAGE_SIZE = 50;
 
@@ -90,11 +91,18 @@ export async function PUT(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const body = await req.json();
-    const { userId, role } = body;
+    const parsed = updateUserRoleSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: "Invalid userId or role", errors: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { userId, role } = parsed.data;
 
-    if (!userId || !role) {
-      return new NextResponse("Missing required fields", { status: 400 });
+    // An admin demoting themselves would lock them out of this endpoint mid-session.
+    if (userId === user.id && role !== "ADMIN") {
+      return new NextResponse("You cannot change your own admin role", { status: 400 });
     }
 
     const target = await prisma.user.findUnique({

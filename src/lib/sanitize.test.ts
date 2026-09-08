@@ -3,6 +3,7 @@ import {
   sanitizeAnnouncementTitle,
   sanitizeAnnouncementContent,
   sanitizeComment,
+  escapeHtml,
 } from "./sanitize";
 
 describe("sanitize utilities", () => {
@@ -23,5 +24,27 @@ describe("sanitize utilities", () => {
   it("truncates announcement content to max 5000 chars", () => {
     const longContent = "c".repeat(5500);
     expect(sanitizeAnnouncementContent(longContent).length).toBe(5000);
+  });
+});
+
+describe("escapeHtml", () => {
+  it("neutralises tags so injected markup cannot execute", () => {
+    expect(escapeHtml('<script>alert(1)</script>')).toBe(
+      "&lt;script&gt;alert(1)&lt;/script&gt;"
+    );
+  });
+
+  it("escapes attribute-breaking quotes", () => {
+    expect(escapeHtml(`" onmouseover='x'`)).toBe(
+      "&quot; onmouseover=&#39;x&#39;"
+    );
+  });
+
+  it("escapes ampersands first so entities are not double-decoded", () => {
+    expect(escapeHtml("&lt;")).toBe("&amp;lt;");
+  });
+
+  it("leaves ordinary text untouched", () => {
+    expect(escapeHtml("Hello there, world 123")).toBe("Hello there, world 123");
   });
 });

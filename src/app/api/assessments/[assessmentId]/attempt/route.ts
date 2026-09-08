@@ -29,7 +29,6 @@ export async function POST(
           maxAttempts: true,
           passingScore: true,
           courseId: true,
-          course: { select: { id: true, _count: { select: { modules: true } } } },
           questions: {
             select: {
               id: true,
@@ -47,6 +46,17 @@ export async function POST(
     ]);
 
     if (!assessment) return new NextResponse("Assessment not found", { status: 404 });
+
+    // Only trainees enrolled in the parent course may submit an attempt.
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId: user.id, courseId: assessment.courseId } },
+      select: { id: true },
+    });
+    if (!enrollment) {
+      return new NextResponse("You must be enrolled in this course to attempt its assessments", {
+        status: 403,
+      });
+    }
 
     if (assessment.dueDate && new Date() > new Date(assessment.dueDate)) {
       return new NextResponse("Assessment deadline has passed", { status: 403 });
@@ -83,29 +93,35 @@ export async function POST(
     const passed = score >= assessment.passingScore;
     const attemptNo = priorCount + 1;
 
-    const attempt = await prisma.assessmentAttempt.create({
-      data: {
-        userId: user.id,
-        assessmentId: assessment.id,
-        attemptNo,
-        score,
-        passed,
-      },
-    });
+    let attempt;
+    try {
+      attempt = await prisma.assessmentAttempt.create({
+        data: {
+          userId: user.id,
+          assessmentId: assessment.id,
+          attemptNo,
+          score,
+          passed,
+        },
+      });
+    } catch (err) {
+      // Two concurrent submissions can compute the same attemptNo and collide
+      // on the [userId, assessmentId, attemptNo] unique constraint.
+      if ((err as { code?: string })?.code === "P2002") {
+        return NextResponse.json(
+          { error: "Another attempt was submitted at the same time. Please retry." },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     if (passed) {
-      const totalModules = assessment.course._count.modules || 1;
-      const completedModules = await prisma.moduleProgress.count({
-        where: { userId: user.id, module: { courseId: assessment.courseId }, completed: true },
-      });
-      const moduleProgress = Math.round((completedModules / totalModules) * 100);
-      const newProgress = Math.max(moduleProgress, 100);
-      await prisma.enrollment.updateMany({
-        where: { userId: user.id, courseId: assessment.courseId },
-        data: {
-          progress: newProgress,
-          status: "COMPLETED",
-        },
+      // Passing an assessment completes the course outright, so progress is 100
+      // by definition — no module tally needed.
+      await prisma.enrollment.update({
+        where: { id: enrollment.id },
+        data: { progress: 100, status: "COMPLETED" },
       });
     }
 
