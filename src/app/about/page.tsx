@@ -22,8 +22,8 @@ const team: Member[] = [
   { name: "Ananya Dasgupta", github: "ananyadasgupta08" },
   { name: "Debatroyie Halder", github: "debatroyiehalder-design" },
   { name: "Rupam Chandra", github: "rupam-backend" },
-  { name: "Ujjwal Kumar" },
-  { name: "Subhendu Sasmal" },
+  { name: "Ujjwal Kumar", github: "rajkumarujjwaljime-tech" },
+  { name: "Subhendu Sasmal", github: "subhendusasmal390-a11y" },
 ];
 
 /** Derives up to two initials for the avatar placeholder. */
