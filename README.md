@@ -4,7 +4,7 @@ A modern, high-performance **Digital Capacity Building and Learning Management P
 
 Developed by team **Code Crackers**.
 
-🌐 **Live Deployment:** [https://capacity-connect.vercel.app](https://capacity-connect-pi.vercel.app)
+🌐 **Live Deployment:** [https://capacity-connect-pi.vercel.app](https://capacity-connect-pi.vercel.app)
 
 ---
 
